@@ -3,6 +3,8 @@
 # Обертка поверх штатного энтрипоинта MariaDB.
 # Параметры, зависящие от ресурсов хоста, считаются при запуске контейнера
 # и складываются в отдельный конфиг, а не вшиваются в образ при сборке.
+# Пользователь debezium создается в том же проходе, что и MARIADB_USER:
+# после docker_setup_db, пока поднят временный сервер первой инициализации.
 
 set -eo pipefail
 
@@ -44,6 +46,14 @@ autotune() {
     grep -E '^[a-z_]+=' "$AUTOTUNE_CNF" || true
 }
 
+create_debezium_user_on_init() {
+    if [ -z "${MARIADB_DEBEZIUM_PASSWORD:-}" ]; then
+        echo "# MARIADB_DEBEZIUM_PASSWORD не задан, создание пользователя debezium пропущено"
+        return 0
+    fi
+    bash /scripts/create-debezium-user.sh
+}
+
 if [ "${1:0:1}" = "-" ]; then
     set -- mariadbd "$@"
 fi
@@ -52,4 +62,21 @@ if [ "$1" = "mariadbd" ] || [ "$1" = "mysqld" ]; then
     autotune
 fi
 
-exec docker-entrypoint.sh "$@"
+# shellcheck source=/dev/null
+source /usr/local/bin/docker-entrypoint.sh
+
+# Штатный _main после gosu делает exec "${BASH_SOURCE[0]}", а это путь к
+# файлу, где определена функция, то есть к оригинальному docker-entrypoint.sh.
+# Подменяем на $0, иначе повторный запуск от mysql идет без наших обёрток.
+eval "$(declare -f _main | sed 's/\${BASH_SOURCE\[0\]}/\$0/')"
+
+# Переименовываем штатную функцию и вызываем debezium сразу после нее,
+# пока временный сервер первой инициализации еще работает
+eval "$(declare -f docker_setup_db | sed '1s/^docker_setup_db/docker_setup_db_original/')"
+
+docker_setup_db() {
+    docker_setup_db_original "$@"
+    create_debezium_user_on_init
+}
+
+_main "$@"

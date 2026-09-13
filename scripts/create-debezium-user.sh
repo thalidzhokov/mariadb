@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Скрипт для создания пользователя debezium.
-# Запускается в контейнере mariadb.
-# Подставляет переменные окружения в шаблон и применяет его под правами root пользователя.
-# Запуск в контейнере командой: bash scripts/create-debezium-user.sh
-# Запуск на хосте командой: docker exec -t mariadb bash scripts/create-debezium-user.sh
+# Создание пользователя debezium.
+# Вызывается из entrypoint.sh при первой инициализации тома и вручную
+# на уже существующей базе: bash scripts/create-debezium-user.sh
+# На хосте: docker exec -t mariadb bash scripts/create-debezium-user.sh
 
 set -euo pipefail
 
@@ -30,6 +29,12 @@ if [ -z "${MARIADB_DEBEZIUM_PASSWORD:-}" ]; then
 fi
 
 CLIENT=(mariadb -u root)
+
+# При первой инициализации временный сервер слушает unix socket (SOCKET
+# выставляет штатный docker_setup_env). В обычном docker exec SOCKET нет.
+if [ -n "${SOCKET:-}" ]; then
+    CLIENT+=(--protocol=socket -hlocalhost --socket="$SOCKET")
+fi
 
 if [ -n "${MARIADB_ROOT_PASSWORD:-}" ]; then
     CLIENT+=(-p"$MARIADB_ROOT_PASSWORD")

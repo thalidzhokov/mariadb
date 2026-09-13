@@ -120,12 +120,13 @@ install -d -o 999 -g 999 -m 750 /var/backups/myproject/mariadb
 ## Пользователь debezium
 
 Создается при первой инициализации тома данных, если задан
-`MARIADB_DEBEZIUM_PASSWORD`, так же как базовый образ создает `MARIADB_USER`.
+`MARIADB_DEBEZIUM_PASSWORD`: энтрипоинт вызывает `scripts/create-debezium-user.sh`
+сразу после штатного `docker_setup_db`, в том же проходе, что и `MARIADB_USER`.
 Права: `SELECT`, `RELOAD`, `SHOW DATABASES`, `REPLICATION SLAVE`,
 `BINLOG MONITOR`, `SLAVE MONITOR` глобально плюс `SELECT` и `LOCK TABLES` на
 `MARIADB_DATABASE`.
 
-На уже инициализированном томе initdb-скрипты не выполняются, поэтому для
+На уже инициализированном томе создание не повторяется, поэтому для
 существующей базы или после смены пароля нужно запустить скрипт вручную:
 
 ```bash

@@ -37,7 +37,6 @@ COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 COPY --chmod=0755 scripts/ /scripts/
 COPY init-templates/ /init-templates/
-COPY --chmod=0755 initdb.d/z0-debezium-user.sh /docker-entrypoint-initdb.d/z0-debezium-user.sh
 
 # Владелец mysql, чтобы свежий named volume унаследовал права от образа
 RUN mkdir -p /mariadb-dump && chown mysql:mysql /mariadb-dump
