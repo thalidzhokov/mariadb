@@ -3,26 +3,35 @@ services:
     build:
       context: ./mariadb
       args:
-        MARIADB_DATABASE: ${PANEL_DB_NAME}
+        MARIADB_DATABASE: ${MARIADB_DATABASE}
         # Кастом для debezium
-        MARIADB_DEBEZIUM_PASSWORD: ${PANEL_DB_DEBEZIUM_PASSWORD}
+        MARIADB_DEBEZIUM_PASSWORD: ${MARIADB_DEBEZIUM_PASSWORD}
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: $PANEL_DB_ROOT_PASSWORD
-      MARIADB_DATABASE: $PANEL_DB_NAME
-      MARIADB_USER: $PANEL_DB_USER
-      MARIADB_PASSWORD: $PANEL_DB_PASSWORD
-      # Кастом для debezium
-      MARIADB_DEBEZIUM_PASSWORD: $PANEL_DB_DEBEZIUM_PASSWORD
-      # Кастом для проверки таблицы в healthcheck.sh
-      MARIADB_HEALTHCHECK_TABLE: ${PANEL_DB_HEALTHCHECK_TABLE:-}
-      # Дополнительно можем проверить PRIMARY KEY
-      # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
-      MARIADB_HEALTHCHECK_PRIMARY_KEY: ${PANEL_DB_HEALTHCHECK_PRIMARY_KEY:-}
+      # ///////////////////////////////////////////////////////////
+      # Встроенные переменные
+      # ///////////////////////////////////////////////////////////
+      MARIADB_ROOT_PASSWORD: $MARIADB_ROOT_PASSWORD
+      MARIADB_DATABASE: $MARIADB_DATABASE
+      MARIADB_USER: $MARIADB_USER
+      MARIADB_PASSWORD: $MARIADB_PASSWORD
       # Автоматическое обновление базы данных
-      MARIADB_AUTO_UPGRADE: "1"
+      # MARIADB_AUTO_UPGRADE: "1"
       # Опционально, если не нужно создавать резервные копии перед обновлением
       # MARIADB_DISABLE_UPGRADE_BACKUP: "1"
+      # ///////////////////////////////////////////////////////////
+      # Кастомы образа
+      # ///////////////////////////////////////////////////////////
+      # Кастом для создания и настройка пользователя debezium при первом запуске
+      # Если переменная не указана, то пользователя не создаем и не настраиваем логическую репликацию
+      MARIADB_DEBEZIUM_PASSWORD: ${MARIADB_DEBEZIUM_PASSWORD:-}
+      # Кастом для проверки таблицы в healthcheck.sh 
+      # Если таблица не указана, то проверка в healthcheck.sh не производится
+      MARIADB_HEALTHCHECK_TABLE: ${MARIADB_HEALTHCHECK_TABLE:-}
+      # Дополнительно можем проверить PRIMARY KEY
+      # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
+      # Если первичный ключ не указан, то проверка в healthcheck.sh не производится
+      MARIADB_HEALTHCHECK_PRIMARY_KEY: ${MARIADB_HEALTHCHECK_PRIMARY_KEY:-}
     volumes:
       - mariadb:/var/lib/mysql
       # Резервные копии базы данных
@@ -30,6 +39,7 @@ services:
       # Инициализация базы данных
       # При создании контейнера шаблоны из ./init-templates/ добавляются в папку /docker-entrypoint-initdb.d/
       # Поэтому файлы для инициализации необходимо добавлять отдельными монт-вольмами
+      # TODO: тут нужно подумать как это ограничение обойти или как-то изменить подход к инициализации базы данных
       # - ./infra/mariadb/init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
       # - ./mariadb/init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
     sysctls:
