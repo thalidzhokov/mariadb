@@ -86,6 +86,9 @@ binlog_row_image = FULL
 expire_logs_days = 30
 server-id = 1
 log_slave_updates = ON
+# Проверка CRC при чтении binlog (отдача реплике/Debezium). В MySQL: source_verify_checksum
+# Default Value: OFF
+master_verify_checksum = ON
 
 # Debezium - GTID Configuration для MySQL
 # gtid_mode = ON
