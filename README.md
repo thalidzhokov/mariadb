@@ -103,7 +103,7 @@ IOPS замеряются fio при первом запуске на томе �
 | `drop.sh` | Удалить базу |
 | `export.sh` | Дамп в `latest_<день недели>.sql.gz` |
 | `import.sh` | Импорт самого свежего дампа |
-| `recreate.sh` | Экспорт, удаление, создание, импорт, пользователь debezium |
+| `recreate.sh` | Удаление, создание, импорт последнего дампа, пользователь debezium. С `--export` сначала снимает свежий дамп |
 | `create-debezium-user.sh` | Создать или обновить пользователя `debezium` |
 | `upgrade.sh` | `mariadb-upgrade` системных таблиц |
 | `optimize.sh` | `OPTIMIZE TABLE` по всем таблицам базы |

@@ -153,12 +153,12 @@ healthcheck_keeps_binlog() {
 }
 check "healthcheck.sh проходит, видит индекс и не ротирует бинлог" healthcheck_keeps_binlog
 
-# recreate.sh с новым паролем: экспорт под старым, затем пересоздание без экспорта
+# recreate.sh с новым паролем: экспорт под старым, затем пересоздание из этого дампа
 echo "# scripts/recreate.sh"
 sql_root "CREATE TABLE \`$DATABASE\`.marker (id INT PRIMARY KEY); INSERT INTO \`$DATABASE\`.marker VALUES (42)"
 check "export.sh под текущим паролем" docker exec "$NAME" bash scripts/export.sh
-check "recreate.sh --no-export с новым MARIADB_PASSWORD" \
-    docker exec -e MARIADB_PASSWORD="$NEW_APP_PASSWORD" "$NAME" bash scripts/recreate.sh --no-export
+check "recreate.sh с новым MARIADB_PASSWORD" \
+    docker exec -e MARIADB_PASSWORD="$NEW_APP_PASSWORD" "$NAME" bash scripts/recreate.sh
 check "$USER: вход по новому паролю" sql_as "$USER" "$NEW_APP_PASSWORD" "SELECT 1"
 old_password_rejected() {
     ! sql_as "$USER" "$APP_PASSWORD" "SELECT 1"
@@ -171,6 +171,8 @@ other_db_denied() {
     ! sql_as "$USER" "$NEW_APP_PASSWORD" "USE testXdb"
 }
 check "$USER: нет доступа к testXdb" other_db_denied
+check "recreate.sh --export под новым паролем" \
+    docker exec -e MARIADB_PASSWORD="$NEW_APP_PASSWORD" "$NAME" bash scripts/recreate.sh --export
 
 marker_restored() {
     local value

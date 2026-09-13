@@ -7,14 +7,14 @@
 # Использование: bash scripts/recreate.sh [ОПЦИИ]
 # 
 # ОПЦИИ:
-#   --no-export, -ne  Пропустить создание экспорта перед пересозданием
-#   --help, -h        Показать справку
+#   --export, -e  Сделать экспорт перед пересозданием
+#   --help, -h    Показать справку
 # 
 # Примеры запуска:
 #   В контейнере: bash scripts/recreate.sh
-#   В контейнере без экспорта: bash scripts/recreate.sh --no-export
+#   В контейнере с экспортом: bash scripts/recreate.sh --export
 #   На хосте: docker exec -t mariadb bash scripts/recreate.sh
-#   На хосте без экспорта: docker exec -t mariadb bash scripts/recreate.sh --no-export
+#   На хосте с экспортом: docker exec -t mariadb bash scripts/recreate.sh --export
 
 set -euo pipefail
 
@@ -29,13 +29,13 @@ show_help() {
 Скрипт пересоздания базы данных MariaDB.
 
 ОПЦИИ:
-  --no-export, -ne  Пропустить создание экспорта перед пересозданием
-  --help, -h        Показать эту справку и выйти
+  --export, -e  Сделать экспорт перед пересозданием
+  --help, -h    Показать эту справку и выйти
 
 ПРИМЕРЫ:
-  $(basename "$0")              # Пересоздать БД с созданием экспорта
-  $(basename "$0") --no-export  # Пересоздать БД без экспорта
-  $(basename "$0") -ne          # То же самое, короткий флаг
+  $(basename "$0")           # Пересоздать БД из последнего дампа
+  $(basename "$0") --export  # Сначала сделать свежий дамп
+  $(basename "$0") -e        # То же самое, короткий флаг
 
 ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ:
   MARIADB_DATABASE           - Имя базы данных
@@ -49,7 +49,7 @@ show_help() {
 }
 
 # Обработка аргументов командной строки
-NO_EXPORT=false
+EXPORT=false
 
 for arg in "$@"; do
     case $arg in
@@ -57,8 +57,8 @@ for arg in "$@"; do
             show_help
             exit 0
             ;;
-        --no-export|-ne)
-            NO_EXPORT=true
+        --export|-e)
+            EXPORT=true
             ;;
         *)
             echo "ОШИБКА: Неизвестный аргумент: $arg"
@@ -73,8 +73,10 @@ echo "# Пересоздаем базу данных..."
 # Получаем директорию текущего скрипта
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 0. Создаем экспорт базы данных, если не указан флаг --no-export или -ne
-if [ "$NO_EXPORT" = false ]; then
+# 0. Создаем экспорт базы данных, если указан флаг --export или -e.
+# По умолчанию экспорта нет: после смены MARIADB_PASSWORD дамп под новым
+# паролем не снять, а импорт идет из последнего имеющегося latest_*.sql.gz
+if [ "$EXPORT" = true ]; then
     echo "# 0."
 
     # Если создание экспорта завершилось с ошибкой, то выходим
