@@ -233,6 +233,6 @@ echo "# Все проверки прошли успешно! Запускаем 
 TUNER_CNF="$(mktemp)"
 chmod 600 "$TUNER_CNF"
 printf "[client]\nuser=root\npassword=%s\n" "$MARIADB_ROOT_PASSWORD" > "$TUNER_CNF"
-perl ./mysqltuner.pl --defaults-file="$TUNER_CNF" --noask
+perl /mysqltuner.pl --defaults-file="$TUNER_CNF" --noask
 rm -f "$TUNER_CNF"
 

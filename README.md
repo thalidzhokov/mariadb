@@ -52,7 +52,7 @@ docker run -d --name mariadb \
 | `MARIADB_AUTOTUNE_FIO_FORCE` | не задана | Повторить замер IOPS, игнорируя кеш |
 | `MARIADB_DUMP_DIR` | `/var/www/dump` | Каталог для дампов |
 | `MARIADB_HEALTHCHECK_TABLE` | не задана | Таблица, наличие которой проверяет `scripts/healthcheck.sh` |
-| `MARIADB_HEALTHCHECK_PRIMARY_KEY` | не задана | PRIMARY KEY, наличие которого проверяется в этой таблице |
+| `MARIADB_HEALTHCHECK_PRIMARY_KEY` | не задана | Имя ключа в этой таблице, у первичного ключа это всегда `PRIMARY` |
 
 Свои переменные используют тот же префикс `MARIADB_`, что и базовый образ,
 поэтому при обновлении базы возможны пересечения имен.
