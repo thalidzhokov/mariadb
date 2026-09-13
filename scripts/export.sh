@@ -44,21 +44,29 @@ if [ ! -d "$DUMP_DIR" ]; then
     exit 1
 fi
 
-# Создаем дамп и сжимаем его
+# Пишем во временный файл: gzip > target при ошибке dump оставляет
+# валидный пустой .sql.gz, который import/recreate потом принимают как свежий дамп
 echo "# Создаем дамп в файл $DUMP_FILE..."
-mariadb-dump -u "$MARIADB_USER" -p"$MARIADB_PASSWORD"  \
+DUMP_TMP="${DUMP_FILE}.tmp.$$"
+trap 'rm -f "$DUMP_TMP"' EXIT
+
+mariadb-dump -u "$MARIADB_USER" -p"$MARIADB_PASSWORD" \
     --default-character-set=utf8mb4 \
     --events \
     --routines \
     --single-transaction \
     --triggers \
-    "$MARIADB_DATABASE" | gzip > "$DUMP_FILE"
+    "$MARIADB_DATABASE" | gzip > "$DUMP_TMP"
 
-# Проверяем наличие файла дампа
-if [ ! -f "$DUMP_FILE" ]; then
-    echo "ОШИБКА: Не удалось создать дамп $DUMP_FILE базы данных!"
+# gzip от пустого stdin — около 20 байт; такой файл не публикуем
+DUMP_SIZE="$(wc -c < "$DUMP_TMP" | tr -d ' ')"
+if [ "$DUMP_SIZE" -le 20 ]; then
+    echo "ОШИБКА: дамп пустой или не создан ($DUMP_SIZE байт)!"
     exit 1
-else
-    echo "# Дамп базы данных $MARIADB_DATABASE успешно создан: $DUMP_FILE"
-    ls -lh "$DUMP_FILE"
 fi
+
+mv -f "$DUMP_TMP" "$DUMP_FILE"
+trap - EXIT
+
+echo "# Дамп базы данных $MARIADB_DATABASE успешно создан: $DUMP_FILE"
+ls -lh "$DUMP_FILE"
