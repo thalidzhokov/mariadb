@@ -79,12 +79,39 @@ else
         echo "[ok] Пользователь debezium доступен"
     fi
 
-    # Проверяем права debezium пользователя на SELECT
-    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE'" >/dev/null 2>&1; then
-        echo "[error] Пользователь debezium не имеет прав SELECT на базу данных $MARIADB_DATABASE"
+    # SELECT на information_schema не доказывает GRANT SELECT ON db.*:
+    # schema видна и без прав на приложение. Смотрим SHOW GRANTS и читаем
+    # реальную таблицу в MARIADB_DATABASE.
+    if [ -z "$MARIADB_DATABASE" ]; then
+        echo "[error] Для проверки SELECT debezium нужна MARIADB_DATABASE"
+        exit 1
+    fi
+
+    db_grant="${MARIADB_DATABASE//_/\\_}"
+    # -r: иначе клиент удваивает \ в выводе (test\\_db вместо test\_db)
+    debezium_grants="$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -N -s -r -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null || true)"
+    if ! printf '%s\n' "$debezium_grants" | grep -F "\`${db_grant}\`.*" | grep -qi 'SELECT'; then
+        echo "[error] Пользователь debezium не имеет GRANT SELECT ON \`${db_grant}\`.*"
+        exit 1
+    fi
+    echo "[ok] Пользователь debezium имеет GRANT SELECT ON \`${db_grant}\`.*"
+
+    select_table=""
+    if [ -n "${MARIADB_HEALTHCHECK_TABLE:-}" ]; then
+        select_table="$MARIADB_HEALTHCHECK_TABLE"
+    else
+        select_table="$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -N -s -e \
+            "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$MARIADB_DATABASE' AND TABLE_TYPE = 'BASE TABLE' LIMIT 1" 2>/dev/null || true)"
+    fi
+
+    if [ -z "$select_table" ]; then
+        echo "[skip] В $MARIADB_DATABASE нет таблицы для проверки SELECT под debezium"
+    elif ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e \
+        "SELECT 1 FROM \`$MARIADB_DATABASE\`.\`$select_table\` LIMIT 1" >/dev/null 2>&1; then
+        echo "[error] Пользователь debezium не может SELECT из $MARIADB_DATABASE.$select_table"
         exit 1
     else
-        echo "[ok] Пользователь debezium имеет права SELECT"
+        echo "[ok] Пользователь debezium читает $MARIADB_DATABASE.$select_table"
     fi
 
     # Проверяем права debezium пользователя на RELOAD.
