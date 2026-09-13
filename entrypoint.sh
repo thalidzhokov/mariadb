@@ -9,19 +9,33 @@
 set -eo pipefail
 
 AUTOTUNE_CNF="/etc/mysql/conf.d/95-autotune.cnf"
+# Ниже порога floors раздували pool/redo выше лимита cgroup — не тюним
+AUTOTUNE_MIN_MB="${MARIADB_AUTOTUNE_MIN_MB:-512}"
+
+# Иначе прошлый 95-autotune.cnf остаётся и продолжает задавать параметры
+clear_autotune_cnf() {
+    local reason="$1"
+    if [ -e "$AUTOTUNE_CNF" ]; then
+        if rm -f "$AUTOTUNE_CNF"; then
+            echo "[autotune] ${reason}, удален $AUTOTUNE_CNF"
+        else
+            echo "[autotune] ${reason}, но $AUTOTUNE_CNF не удален (нет прав)"
+        fi
+    else
+        echo "[autotune] ${reason}"
+    fi
+}
 
 autotune() {
     if [ "${MARIADB_AUTOTUNE:-1}" = "0" ]; then
-        # Иначе прошлый 95-autotune.cnf остаётся и продолжает задавать параметры
-        if [ -e "$AUTOTUNE_CNF" ]; then
-            if rm -f "$AUTOTUNE_CNF"; then
-                echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0, удален $AUTOTUNE_CNF"
-            else
-                echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0, но $AUTOTUNE_CNF не удален (нет прав)"
-            fi
-        else
-            echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0"
-        fi
+        clear_autotune_cnf "расчет отключен через MARIADB_AUTOTUNE=0"
+        return 0
+    fi
+
+    local total_mb
+    total_mb="$(bash /autotune/memory.sh --limit-only)"
+    if [ "$total_mb" -lt "$AUTOTUNE_MIN_MB" ]; then
+        clear_autotune_cnf "доступно ${total_mb}M < ${AUTOTUNE_MIN_MB}M, расчет пропущен (серверные дефолты)"
         return 0
     fi
 

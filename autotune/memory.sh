@@ -31,11 +31,18 @@ memory_limit_mb() {
     awk '/^MemTotal:/ {print int($2 / 1024)}' /proc/meminfo
 }
 
+# Только лимит памяти: entrypoint решает, запускать ли расчет
+if [ "${1:-}" = "--limit-only" ]; then
+    memory_limit_mb
+    exit 0
+fi
+
 TOTAL_MB="$(memory_limit_mb)"
 BUFFER_POOL_MB=$((TOTAL_MB * BUFFER_POOL_PERCENT / 100))
 
-# Нижние границы равны серверным дефолтам 11.8. Полы выше них ломают запуск
-# на хостах с малой памятью: контейнеру на 512M нельзя выдать гигабайтный пул
+# Нижние границы = серверные дефолты 11.8. Сюда попадаем только при
+# TOTAL_MB >= MARIADB_AUTOTUNE_MIN_MB (по умолчанию 512): иначе entrypoint
+# расчет не вызывает. 60% от 512 уже выше 128M, floors лишь подстраховывают.
 if [ "$BUFFER_POOL_MB" -lt 128 ]; then
     BUFFER_POOL_MB=128
 fi

@@ -59,7 +59,8 @@ services:
     # HEALTHCHECK задан в образе: штатная проверка базового образа с --connect --innodb_initialized.
     # Полная проверка прав и настроек вынесена в scripts/healthcheck.sh и запускается по требованию,
     # т.к. MySQLTuner в ней занимает ~15s
-    # От лимита памяти зависит размер buffer pool, см. autotune/memory.sh
+    # От лимита памяти зависит размер buffer pool, см. autotune/memory.sh.
+    # Ниже 512M расчет параметров пропускается (MARIADB_AUTOTUNE_MIN_MB).
     # mem_limit: 2g
 
 volumes:
