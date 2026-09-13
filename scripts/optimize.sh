@@ -53,10 +53,10 @@ while IFS= read -r table; do
     CURRENT=$((CURRENT + 1))
     echo "# [$CURRENT/$TABLE_COUNT] Оптимизируем таблицу: $table"
     
-    # Выполняем OPTIMIZE TABLE
-    RESULT=$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -D "$MARIADB_DATABASE" -e "OPTIMIZE TABLE \`$table\`" 2>&1)
-    
-    if [ $? -eq 0 ]; then
+    # Выполняем OPTIMIZE TABLE.
+    # Результат присваивания проверяем прямо в if: отдельная проверка $?
+    # после присваивания всегда видела бы его код, а не код mariadb
+    if RESULT=$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -D "$MARIADB_DATABASE" -e "OPTIMIZE TABLE \`$table\`" 2>&1); then
         # Примеры результата оптимизации
         # 1.
         # Table   Op      Msg_type        Msg_text

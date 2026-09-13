@@ -108,10 +108,14 @@ echo "# Срезов processlist: $SAMPLES"
 echo "# Интервал: ${INTERVAL} сек"
 echo "# Отчеты: $OUT_DIR"
 
-MARIADB_CMD="$DB_CLIENT_BIN -uroot -p\"$MARIADB_ROOT_PASSWORD\""
+# Запросы выполняем через функцию, а не через eval со вшитым в строку паролем:
+# eval ломается на паролях со спецсимволами
+run_sql() {
+    "$DB_CLIENT_BIN" -uroot -p"$MARIADB_ROOT_PASSWORD" -e "$1"
+}
 
 echo "# [1/7] Снимаем переменные и глобальный статус..."
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT NOW() AS ts, VERSION() AS version;
 SHOW VARIABLES WHERE Variable_name IN (
 'max_connections','thread_cache_size','table_open_cache','table_definition_cache',
@@ -127,7 +131,7 @@ SHOW GLOBAL STATUS WHERE Variable_name IN (
 'Innodb_row_lock_waits','Innodb_row_lock_time','Innodb_row_lock_time_avg',
 'Innodb_buffer_pool_read_requests','Innodb_buffer_pool_reads'
 );
-\" > \"${OUT_DIR}/01-global-status.txt\""
+" > "${OUT_DIR}/01-global-status.txt"
 
 echo "# [2/7] Снимаем серию PROCESSLIST..."
 PROCESSLIST_FILE="${OUT_DIR}/02-processlist-samples.txt"
@@ -142,11 +146,11 @@ for i in $(seq 1 "$SAMPLES"); do
         echo "===== SAMPLE ${i}/${SAMPLES} @ $(date +%F' '%T) ====="
     } >> "$PROCESSLIST_FILE"
 
-    eval "$MARIADB_CMD -e \"
+    run_sql "
 SHOW FULL PROCESSLIST;
 SHOW GLOBAL STATUS LIKE 'Threads_running';
 SHOW GLOBAL STATUS LIKE 'Threads_connected';
-\" >> \"${PROCESSLIST_FILE}\""
+" >> "$PROCESSLIST_FILE"
 
     if [ "$i" -lt "$SAMPLES" ]; then
         sleep "$INTERVAL"
@@ -154,7 +158,7 @@ SHOW GLOBAL STATUS LIKE 'Threads_connected';
 done
 
 echo "# [3/7] Снимаем состояние InnoDB..."
-eval "$MARIADB_CMD -e \"SHOW ENGINE INNODB STATUS\\G\" > \"${OUT_DIR}/03-innodb-status.txt\""
+run_sql "SHOW ENGINE INNODB STATUS\G" > "${OUT_DIR}/03-innodb-status.txt"
 
 echo "# [4/7] Снимаем блокировки и активные транзакции..."
 LOCKS_FILE="${OUT_DIR}/04-locks-and-transactions.txt"
@@ -163,14 +167,14 @@ LOCKS_FILE="${OUT_DIR}/04-locks-and-transactions.txt"
     echo "# ts: $(date +%F' '%T)"
 } > "$LOCKS_FILE"
 
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT NOW() AS ts;
 SELECT trx_id, trx_state, trx_started, trx_wait_started, trx_rows_locked, trx_rows_modified, trx_query
 FROM information_schema.innodb_trx
 ORDER BY trx_started ASC;
-\" >> \"${LOCKS_FILE}\""
+" >> "$LOCKS_FILE"
 
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT
   r.trx_id AS waiting_trx_id,
   r.trx_started AS waiting_started,
@@ -187,10 +191,10 @@ JOIN information_schema.innodb_locks lw ON w.requested_lock_id = lw.lock_id
 JOIN information_schema.innodb_locks lb ON w.blocking_lock_id = lb.lock_id
 JOIN information_schema.innodb_trx r ON w.requesting_trx_id = r.trx_id
 JOIN information_schema.innodb_trx b ON w.blocking_trx_id = b.trx_id;
-\" >> \"${LOCKS_FILE}\"" || true
+" >> "$LOCKS_FILE" || true
 
 echo "# [5/7] Собираем топ SQL по digest (performance_schema)..."
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT
   SCHEMA_NAME,
   COUNT_STAR AS exec_count,
@@ -205,9 +209,9 @@ FROM performance_schema.events_statements_summary_by_digest
 WHERE SCHEMA_NAME = '${TARGET_DB}'
 ORDER BY SUM_TIMER_WAIT DESC
 LIMIT 50;
-\" > \"${OUT_DIR}/05-top-digests-by-time.txt\""
+" > "${OUT_DIR}/05-top-digests-by-time.txt"
 
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT
   SCHEMA_NAME,
   COUNT_STAR AS exec_count,
@@ -219,10 +223,10 @@ FROM performance_schema.events_statements_summary_by_digest
 WHERE SCHEMA_NAME = '${TARGET_DB}'
 ORDER BY AVG_TIMER_WAIT DESC
 LIMIT 50;
-\" > \"${OUT_DIR}/05-top-digests-by-avg.txt\""
+" > "${OUT_DIR}/05-top-digests-by-avg.txt"
 
 echo "# [6/7] Собираем горячие таблицы..."
-eval "$MARIADB_CMD -e \"
+run_sql "
 SELECT
   OBJECT_SCHEMA,
   OBJECT_NAME,
@@ -234,10 +238,10 @@ FROM performance_schema.table_io_waits_summary_by_table
 WHERE OBJECT_SCHEMA = '${TARGET_DB}'
 ORDER BY (SUM_TIMER_READ + SUM_TIMER_WRITE) DESC
 LIMIT 50;
-\" > \"${OUT_DIR}/06-hot-tables.txt\""
+" > "${OUT_DIR}/06-hot-tables.txt"
 
 echo "# [7/7] Забираем хвост slow query log..."
-SLOW_LOG_FILE=$(eval "$MARIADB_CMD -Nse \"SHOW VARIABLES LIKE 'slow_query_log_file';\" | awk '{print \$2}'")
+SLOW_LOG_FILE=$("$DB_CLIENT_BIN" -uroot -p"$MARIADB_ROOT_PASSWORD" -Nse "SHOW VARIABLES LIKE 'slow_query_log_file';" | awk '{print $2}')
 
 {
     echo "# slow_query_log_file=${SLOW_LOG_FILE}"

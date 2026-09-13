@@ -72,53 +72,50 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 0. Создаем экспорт базы данных, если не указан флаг --no-export или -ne
 if [ "$NO_EXPORT" = false ]; then
     echo "# 0."
-    bash "$SCRIPT_DIR/export.sh"
 
     # Если создание экспорта завершилось с ошибкой, то выходим
-    if [ $? -ne 0 ]; then
+    bash "$SCRIPT_DIR/export.sh" || {
         echo "# ОШИБКА: При создании экспорта базы данных!"
         exit 1
-    fi
+    }
 fi
 
 # 1. Удаляем базу данных
 echo "# 1."
-bash "$SCRIPT_DIR/drop.sh"
 
 # Если удаление базы данных завершилось с ошибкой, то выходим
-if [ $? -ne 0 ]; then
+bash "$SCRIPT_DIR/drop.sh" || {
     echo "# ОШИБКА: При удалении базы данных!"
     exit 1
-fi
+}
 
 # 2. Создаем базу данных
 echo "# 2."
-bash "$SCRIPT_DIR/create.sh"
 
 # Если создание базы данных завершилось с ошибкой, то выходим
-if [ $? -ne 0 ]; then
+bash "$SCRIPT_DIR/create.sh" || {
     echo "# ОШИБКА: При создании базы данных!"
     exit 1
-fi
+}
 
 # 3. Импортируем базу данных
 echo "# 3."
-bash "$SCRIPT_DIR/import.sh"
 
 # Если импорт базы данных завершилось с ошибкой, то выходим
-if [ $? -ne 0 ]; then
+bash "$SCRIPT_DIR/import.sh" || {
     echo "# ОШИБКА: При импорте базы данных!"
     exit 1
-fi
+}
 
-# 4. Создаем пользователя debezium
-echo "# 4."
-bash "$SCRIPT_DIR/create-debezium-user.sh"
+# 4. Создаем пользователя debezium, если задан его пароль
+if [ -n "${MARIADB_DEBEZIUM_PASSWORD:-}" ]; then
+    echo "# 4."
 
-# Если создание пользователя debezium завершилось с ошибкой, то выходим
-if [ $? -ne 0 ]; then
-    echo "# ОШИБКА: При создании пользователя debezium!"
-    exit 1
+    # Если создание пользователя debezium завершилось с ошибкой, то выходим
+    bash "$SCRIPT_DIR/create-debezium-user.sh" || {
+        echo "# ОШИБКА: При создании пользователя debezium!"
+        exit 1
+    }
 fi
 
 echo "# Пересоздание базы данных завершено!"

@@ -31,8 +31,16 @@ fi
 # Импортируем базу данных
 echo "# Импортируем базу данных..."
 
-# Проверяем существование файла дампа и берем самый свежий
-DUMP_FILE=$(ls -dt /var/www/dump/latest_*.sql.gz | head -1)
+# Проверяем существование файла дампа и берем самый свежий.
+# ls при отсутствии файлов завершается с ошибкой и из-за set -e обрывает
+# скрипт, не доходя до запасного варианта, поэтому ищем через find
+DUMP_DIR="${MARIADB_DUMP_DIR:-/var/www/dump}"
+DUMP_FILE=""
+
+if [ -d "$DUMP_DIR" ]; then
+    DUMP_FILE=$(find "$DUMP_DIR" -maxdepth 1 -name 'latest_*.sql.gz' -printf '%T@ %p\n' \
+        | sort -rn | sed -n '1s/^[^ ]* //p')
+fi
 
 # Проверяем существование файла дампа
 if [ -f "$DUMP_FILE" ]; then
@@ -54,10 +62,4 @@ fi
 echo "# Импортируем дамп из файла $DUMP_FILE..."
 zcat "$DUMP_FILE" | mariadb -u "$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE"
 
-# Проверяем результат импорта
-if [ $? -eq 0 ]; then
-    echo "# База данных $MARIADB_DATABASE успешно импортирована из $DUMP_FILE"
-else
-    echo "ОШИБКА: Не удалось импортировать базу данных!"
-    exit 1
-fi
+echo "# База данных $MARIADB_DATABASE успешно импортирована из $DUMP_FILE"

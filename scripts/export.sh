@@ -33,11 +33,12 @@ echo "# Создаем дамп базы данных..."
 
 # Определяем день недели (1=понедельник, 7=воскресенье)
 DAY_OF_WEEK=$(date +%u)
-DUMP_FILE="/var/www/dump/latest_${DAY_OF_WEEK}.sql.gz"
+DUMP_DIR="${MARIADB_DUMP_DIR:-/var/www/dump}"
+DUMP_FILE="${DUMP_DIR}/latest_${DAY_OF_WEEK}.sql.gz"
 
 # Проверяем директорию для дампов если её нет
-if [ ! -d "/var/www/dump" ]; then
-    echo "ОШИБКА: Директория /var/www/dump не найдена!"
+if [ ! -d "$DUMP_DIR" ]; then
+    echo "ОШИБКА: Директория $DUMP_DIR не найдена!"
     exit 1
 fi
 

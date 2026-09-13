@@ -4,6 +4,16 @@
 
 set -euo pipefail
 
+# Пустые значения по умолчанию: иначе set -u обрывает скрипт на первой же
+# незаданной переменной, не давая напечатать понятную причину
+: "${MARIADB_ROOT_PASSWORD:=}"
+: "${MARIADB_USER:=}"
+: "${MARIADB_PASSWORD:=}"
+: "${MARIADB_DATABASE:=}"
+: "${MARIADB_DEBEZIUM_PASSWORD:=}"
+: "${MARIADB_HEALTHCHECK_TABLE:=}"
+: "${MARIADB_HEALTHCHECK_PRIMARY_KEY:=}"
+
 # root
 # Все проверки связанные с пользователем делаются под пользователем
 # Проверяем наличие переменной окружения MARIADB_ROOT_PASSWORD
@@ -59,52 +69,52 @@ fi
 
 
 # debezium
-# Проверяем наличие переменной окружения MARIADB_DEBEZIUM_PASSWORD
+# Пользователь debezium необязателен, поэтому проверки выполняются
+# только когда задан MARIADB_DEBEZIUM_PASSWORD
 if [ -z "$MARIADB_DEBEZIUM_PASSWORD" ]; then
-    echo "[error] Переменная окружения MARIADB_DEBEZIUM_PASSWORD не установлена"
-    exit 1
+    echo "[skip] Переменная окружения MARIADB_DEBEZIUM_PASSWORD не установлена"
 else
     echo "[ok] Переменная окружения MARIADB_DEBEZIUM_PASSWORD установлена"
-fi
 
-# Проверка подключение под debezium пользователем
-if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
-    echo "[error] Неправильный пароль debezium пользователя"
-    exit 1
-else
-    echo "[ok] Пользователь debezium доступен"
-fi
+    # Проверка подключение под debezium пользователем
+    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
+        echo "[error] Неправильный пароль debezium пользователя"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium доступен"
+    fi
 
-# Проверяем права debezium пользователя на SELECT
-if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE'" >/dev/null 2>&1; then
-    echo "[error] Пользователь debezium не имеет прав SELECT на базу данных $MARIADB_DATABASE"
-    exit 1
-else
-    echo "[ok] Пользователь debezium имеет права SELECT"
-fi
+    # Проверяем права debezium пользователя на SELECT
+    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE'" >/dev/null 2>&1; then
+        echo "[error] Пользователь debezium не имеет прав SELECT на базу данных $MARIADB_DATABASE"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет права SELECT"
+    fi
 
-# Проверяем права debezium пользователя на RELOAD
-if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "FLUSH LOGS" >/dev/null 2>&1; then
-    echo "[error] Пользователь debezium не имеет права RELOAD"
-    exit 1
-else
-    echo "[ok] Пользователь debezium имеет права RELOAD"
-fi
+    # Проверяем права debezium пользователя на RELOAD
+    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "FLUSH LOGS" >/dev/null 2>&1; then
+        echo "[error] Пользователь debezium не имеет права RELOAD"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет права RELOAD"
+    fi
 
-# Проверяем права debezium пользователя на REPLICATION SLAVE
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "REPLICATION SLAVE"; then
-    echo "[error] Пользователь debezium не имеет права REPLICATION SLAVE"
-    exit 1
-else
-    echo "[ok] Пользователь debezium имеет права REPLICATION SLAVE"
-fi
+    # Проверяем права debezium пользователя на REPLICATION SLAVE
+    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "REPLICATION SLAVE"; then
+        echo "[error] Пользователь debezium не имеет права REPLICATION SLAVE"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет права REPLICATION SLAVE"
+    fi
 
-# Проверяем права debezium пользователя на REPLICATION CLIENT (в MariaDB 10.11+ это BINLOG MONITOR)
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "BINLOG MONITOR\|REPLICATION CLIENT"; then
-    echo "[error] Пользователь debezium не имеет права REPLICATION CLIENT/BINLOG MONITOR"
-    exit 1
-else
-    echo "[ok] Пользователь debezium имеет права REPLICATION CLIENT/BINLOG MONITOR"
+    # Проверяем права debezium пользователя на REPLICATION CLIENT (в MariaDB 10.11+ это BINLOG MONITOR)
+    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "BINLOG MONITOR\|REPLICATION CLIENT"; then
+        echo "[error] Пользователь debezium не имеет права REPLICATION CLIENT/BINLOG MONITOR"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет права REPLICATION CLIENT/BINLOG MONITOR"
+    fi
 fi
 
 # Проверка binary logging

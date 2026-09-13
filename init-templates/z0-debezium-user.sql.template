@@ -1,12 +1,17 @@
--- Скрипт инициализации пользователя debezium для MariaDB
--- Выполняется автоматически при первом запуске контейнера через /docker-entrypoint-initdb.d/
--- Префикс z0- обеспечивает выполнение ПОСЛЕ создания базы данных WordPress
+-- Шаблон инициализации пользователя debezium для MariaDB.
+-- Переменные подставляются при запуске контейнера в scripts/create-debezium-user.sh,
+-- поэтому пароль не попадает в слои образа.
+-- Префикс z0- обеспечивает выполнение после создания MARIADB_DATABASE.
 
--- Проверяем, что база данных WordPress существует
+-- Проверяем, что база данных существует
 SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${MARIADB_DATABASE}' LIMIT 1;
 
 -- Создание пользователя debezium
-CREATE USER IF NOT EXISTS 'debezium'@'%' IDENTIFIED BY '${MARIADB_DEBEZIUM_PASSWORD}';
+CREATE USER IF NOT EXISTS 'debezium'@'%' IDENTIFIED BY PASSWORD '${MARIADB_DEBEZIUM_PASSWORD_HASH}';
+
+-- IF NOT EXISTS не меняет пароль существующему пользователю, поэтому
+-- повторный запуск скрипта после смены MARIADB_DEBEZIUM_PASSWORD его обновляет
+ALTER USER 'debezium'@'%' IDENTIFIED BY PASSWORD '${MARIADB_DEBEZIUM_PASSWORD_HASH}';
 
 -- Основные права для работы Debezium
 GRANT SELECT ON *.* TO 'debezium'@'%';
@@ -18,7 +23,7 @@ GRANT REPLICATION SLAVE ON *.* TO 'debezium'@'%';
 GRANT BINLOG MONITOR ON *.* TO 'debezium'@'%';
 GRANT SLAVE MONITOR ON *.* TO 'debezium'@'%';
 
--- Права для работы с конкретной базой данных WordPress
+-- Права для работы с конкретной базой данных
 GRANT SELECT ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
 GRANT LOCK TABLES ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
 
