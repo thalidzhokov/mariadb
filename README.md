@@ -171,8 +171,7 @@ docker build --build-arg MARIADB_VERSION=11.4 -t thalidzhokov/mariadb:11.4 .
 `tests/run.sh` поднимает контейнер из собранного образа и проверяет
 `HEALTHCHECK`, применение autotune, вход root и debezium по `*_FILE`, пароли с
 кавычкой и слешем, экранирование `_` в `GRANT`, инициализацию из
-`init/test_init.sql`, `scripts/healthcheck.sh` с проверкой таблицы и индекса
-без ротации бинлога и `recreate.sh` со сменой пароля. Контейнер и том удаляются
+`init/test_init.sql`, `scripts/healthcheck.sh` с проверкой таблицы и индекса и `recreate.sh` со сменой пароля. Контейнер и том удаляются
 по завершении.
 
 ```bash
