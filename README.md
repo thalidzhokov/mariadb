@@ -130,7 +130,7 @@ IOPS замеряются fio при первом запуске на томе �
 | `optimize.sh` | `OPTIMIZE TABLE` по всем таблицам базы |
 | `scripts/healthcheck.sh` | Полная проверка пользователей, прав, бинлогов и запуск MySQLTuner |
 | `benchmark.sh` | Замеры через `mariadb-slap` с отчетами |
-| `diagnose-load.sh` | Срезы processlist, блокировки, топ запросов, хвост slow log |
+| `diagnose-load.sh` | Срезы processlist, блокировки (`sys.innodb_lock_waits` / `sys.schema_table_lock_waits`, с MariaDB 10.6), топ запросов, хвост slow log |
 
 Два разных `healthcheck.sh` — не путать:
 

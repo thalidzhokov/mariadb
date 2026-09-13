@@ -8,6 +8,8 @@
 # - глобальные переменные и статус MariaDB
 # - серию срезов PROCESSLIST
 # - состояние InnoDB, блокировки и активные транзакции
+#   (sys.innodb_lock_waits / sys.schema_table_lock_waits — с MariaDB 10.6;
+#   ниже — fallback на information_schema)
 # - топ SQL запросов из performance_schema (digest)
 # - хвост slow query log
 
@@ -169,18 +171,51 @@ LOCKS_FILE="${OUT_DIR}/04-locks-and-transactions.txt"
     echo "# ts: $(date +%F' '%T)"
 } > "$LOCKS_FILE"
 
-run_sql "
-SELECT NOW() AS ts;
-SELECT trx_id, trx_state, trx_started, trx_wait_started, trx_rows_locked, trx_rows_modified, trx_query
+{
+    echo
+    echo "===== information_schema.innodb_trx ====="
+    run_sql "
+SELECT trx_id, trx_state, trx_started, trx_wait_started,
+       trx_rows_locked, trx_rows_modified, trx_mysql_thread_id, trx_query
 FROM information_schema.innodb_trx
 ORDER BY trx_started ASC;
-" >> "$LOCKS_FILE"
+"
 
-run_sql "
+    # sys.innodb_lock_waits / sys.schema_table_lock_waits — с MariaDB 10.6
+    # (встроенный sys). Готовый срез waiting/blocking: pid, age, KILL.
+    # Строятся поверх information_schema.innodb_lock_waits / innodb_locks
+    # (в MariaDB они ещё есть; в MySQL 8 вместо них data_lock_waits).
+    echo
+    echo "===== sys.innodb_lock_waits ====="
+    if ! run_sql "
+SELECT
+  wait_started,
+  wait_age_secs,
+  locked_table,
+  locked_index,
+  locked_type,
+  waiting_pid,
+  waiting_trx_id,
+  waiting_query,
+  waiting_lock_mode,
+  blocking_pid,
+  blocking_trx_id,
+  blocking_query,
+  blocking_lock_mode,
+  sql_kill_blocking_query,
+  sql_kill_blocking_connection
+FROM sys.innodb_lock_waits
+ORDER BY wait_started ASC;
+"; then
+        echo "# sys.innodb_lock_waits недоступен, fallback на information_schema"
+        run_sql "
 SELECT
   r.trx_id AS waiting_trx_id,
+  r.trx_mysql_thread_id AS waiting_pid,
   r.trx_started AS waiting_started,
+  r.trx_wait_started AS wait_started,
   b.trx_id AS blocking_trx_id,
+  b.trx_mysql_thread_id AS blocking_pid,
   b.trx_started AS blocking_started,
   lw.lock_table AS waiting_lock_table,
   lw.lock_index AS waiting_lock_index,
@@ -193,7 +228,31 @@ JOIN information_schema.innodb_locks lw ON w.requested_lock_id = lw.lock_id
 JOIN information_schema.innodb_locks lb ON w.blocking_lock_id = lb.lock_id
 JOIN information_schema.innodb_trx r ON w.requesting_trx_id = r.trx_id
 JOIN information_schema.innodb_trx b ON w.blocking_trx_id = b.trx_id;
-" >> "$LOCKS_FILE" || true
+"
+    fi
+
+    echo
+    echo "===== sys.schema_table_lock_waits ====="
+    run_sql "
+SELECT
+  object_schema,
+  object_name,
+  waiting_thread_id,
+  waiting_pid,
+  waiting_account,
+  waiting_lock_type,
+  waiting_lock_duration,
+  waiting_query,
+  blocking_thread_id,
+  blocking_pid,
+  blocking_account,
+  blocking_lock_type,
+  blocking_lock_duration,
+  sql_kill_blocking_query,
+  sql_kill_blocking_connection
+FROM sys.schema_table_lock_waits;
+" || echo "# sys.schema_table_lock_waits недоступен или пуст с ошибкой"
+} >> "$LOCKS_FILE"
 
 echo "# [5/7] Собираем топ SQL по digest (performance_schema)..."
 run_sql "
