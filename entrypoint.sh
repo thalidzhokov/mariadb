@@ -84,7 +84,9 @@ if [ "${1:0:1}" = "-" ]; then
     set -- mariadbd "$@"
 fi
 
-if [ "$1" = "mariadbd" ] || [ "$1" = "mysqld" ]; then
+# Только от root: после gosu mysql энтрипоинт перезапускается тем же
+# $0, и повторный autotune не может писать в conf.d
+if [ "$(id -u)" = "0" ] && { [ "$1" = "mariadbd" ] || [ "$1" = "mysqld" ]; }; then
     autotune
 fi
 
