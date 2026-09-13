@@ -1,11 +1,7 @@
 services:
   mariadb:
-    build:
-      context: ./mariadb
-      args:
-        MARIADB_DATABASE: ${MARIADB_DATABASE}
-        # Кастом для debezium
-        MARIADB_DEBEZIUM_PASSWORD: ${MARIADB_DEBEZIUM_PASSWORD}
+    # Локальная сборка: docker build -t thalidzhokov/mariadb:11.8 .
+    image: thalidzhokov/mariadb:11.8
     restart: unless-stopped
     environment:
       # ///////////////////////////////////////////////////////////
@@ -15,8 +11,10 @@ services:
       MARIADB_DATABASE: $MARIADB_DATABASE
       MARIADB_USER: $MARIADB_USER
       MARIADB_PASSWORD: $MARIADB_PASSWORD
-      # Автоматическое обновление базы данных
-      # MARIADB_AUTO_UPGRADE: "1"
+      # Автоматическое обновление базы данных.
+      # Без него на томе, созданном старым образом, не создаются пользователи
+      # healthcheck, и HEALTHCHECK контейнера навсегда остается в health: starting
+      MARIADB_AUTO_UPGRADE: "1"
       # Опционально, если не нужно создавать резервные копии перед обновлением
       # MARIADB_DISABLE_UPGRADE_BACKUP: "1"
       # ///////////////////////////////////////////////////////////
@@ -25,32 +23,45 @@ services:
       # Кастом для создания и настройка пользователя debezium при первом запуске
       # Если переменная не указана, то пользователя не создаем и не настраиваем логическую репликацию
       MARIADB_DEBEZIUM_PASSWORD: ${MARIADB_DEBEZIUM_PASSWORD:-}
-      # Кастом для проверки таблицы в healthcheck.sh 
+      # Кастом для проверки таблицы в healthcheck.sh
       # Если таблица не указана, то проверка в healthcheck.sh не производится
       MARIADB_HEALTHCHECK_TABLE: ${MARIADB_HEALTHCHECK_TABLE:-}
       # Дополнительно можем проверить PRIMARY KEY
       # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
       # Если первичный ключ не указан, то проверка в healthcheck.sh не производится
       MARIADB_HEALTHCHECK_PRIMARY_KEY: ${MARIADB_HEALTHCHECK_PRIMARY_KEY:-}
+      # Расчет параметров при запуске контейнера
+      # MARIADB_AUTOTUNE=0 отключает расчет целиком, MARIADB_AUTOTUNE_IO=0 - только замер IOPS
+      # MARIADB_AUTOTUNE: "1"
+      # MARIADB_AUTOTUNE_IO: "1"
+      # MARIADB_BUFFER_POOL_PERCENT: "60"
     volumes:
-      - mariadb:/var/lib/mysql
-      # Резервные копии базы данных
-      - ./mariadb/dump:/var/www/dump
+      # Имя тома не должно совпадать с именем каталога проекта:
+      # compose соберет из них одно и то же имя и подхватит чужой том
+      - mariadb-data:/var/lib/mysql
+      # Резервные копии базы данных.
+      # Свежий named volume наследует владельца mysql из образа, поэтому права настраивать не нужно.
+      # Для bind mount каталог нужно создать заранее: install -d -o 999 -g 999 -m 750 <путь>
+      - mariadb-dump:/var/www/dump
       # Инициализация базы данных
-      # При создании контейнера шаблоны из ./init-templates/ добавляются в папку /docker-entrypoint-initdb.d/
-      # Поэтому файлы для инициализации необходимо добавлять отдельными монт-вольмами
-      # TODO: тут нужно подумать как это ограничение обойти или как-то изменить подход к инициализации базы данных
-      # - ./infra/mariadb/init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
-      # - ./mariadb/init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
+      # Пользователь debezium создается скриптом z0- из образа, поэтому папку
+      # /docker-entrypoint-initdb.d целиком монтировать нельзя: монт-вольюм ее перекроет.
+      # Свои файлы для инициализации добавляем отдельными монт-вольюмами
+      # - ./init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
+      # - ./init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
     sysctls:
       - net.core.somaxconn=10000
-    security_opt:
-      - seccomp:unconfined
+    # Для MariaDB 11.8 не требуется, включать только если в логах появятся отказы seccomp
+    # security_opt:
+    #   - seccomp:unconfined
     cap_add:
       - SYS_NICE
-    healthcheck:
-      test: ["CMD", "bash", "./scripts/healthcheck.sh"]
-      # MySQLTuner в healthcheck.sh занимает ~15s
-      interval: 60s
-      timeout: 60s
-      retries: 50
+    # HEALTHCHECK задан в образе: штатная проверка базового образа с --connect --innodb_initialized.
+    # Полная проверка прав и настроек вынесена в scripts/healthcheck.sh и запускается по требованию,
+    # т.к. MySQLTuner в ней занимает ~15s
+    # От лимита памяти зависит размер buffer pool, см. autotune/memory.sh
+    # mem_limit: 2g
+
+volumes:
+  mariadb-data:
+  mariadb-dump:
