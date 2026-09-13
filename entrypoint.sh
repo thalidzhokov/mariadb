@@ -12,7 +12,16 @@ AUTOTUNE_CNF="/etc/mysql/conf.d/95-autotune.cnf"
 
 autotune() {
     if [ "${MARIADB_AUTOTUNE:-1}" = "0" ]; then
-        echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0"
+        # Иначе прошлый 95-autotune.cnf остаётся и продолжает задавать параметры
+        if [ -e "$AUTOTUNE_CNF" ]; then
+            if rm -f "$AUTOTUNE_CNF"; then
+                echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0, удален $AUTOTUNE_CNF"
+            else
+                echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0, но $AUTOTUNE_CNF не удален (нет прав)"
+            fi
+        else
+            echo "[autotune] расчет отключен через MARIADB_AUTOTUNE=0"
+        fi
         return 0
     fi
 
