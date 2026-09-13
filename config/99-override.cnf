@@ -57,6 +57,10 @@ userstat=ON
 # Default Value: OFF
 innodb_print_all_deadlocks = ON
 
+# На SSD/NVMe сброс соседних dirty-страниц только лишняя работа
+# Default Value: 1
+innodb_flush_neighbors = 0
+
 # Медленные запросы
 # slow_query_log
 # Начиная с MariaDB 10.11.0 является алиасом для log_slow_query.
