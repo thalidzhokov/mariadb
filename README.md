@@ -50,7 +50,7 @@ docker run -d --name mariadb \
 | `MARIADB_KEY_BUFFER_SIZE_MB` | `32` | `key_buffer_size` в мегабайтах |
 | `MARIADB_AUTOTUNE_FIO_RUNTIME` | `30` | Длительность замера IOPS в секундах |
 | `MARIADB_AUTOTUNE_FIO_FORCE` | не задана | Повторить замер IOPS, игнорируя кеш |
-| `MARIADB_DUMP_DIR` | `/var/www/dump` | Каталог для дампов |
+| `MARIADB_DUMP_DIR` | `/mariadb-dump` | Каталог для дампов |
 | `MARIADB_HEALTHCHECK_TABLE` | не задана | Таблица, наличие которой проверяет `scripts/healthcheck.sh` |
 | `MARIADB_HEALTHCHECK_PRIMARY_KEY` | не задана | Имя ключа в этой таблице, у первичного ключа это всегда `PRIMARY` |
 
@@ -105,7 +105,7 @@ IOPS замеряются fio при первом запуске на томе �
 ## Дампы и права
 
 Пользователь сервера внутри контейнера имеет uid и gid 999. Каталог
-`/var/www/dump` создан в образе с этим владельцем, поэтому свежий named volume
+`/mariadb-dump` создан в образе с этим владельцем, поэтому свежий named volume
 наследует права и на хосте настраивать ничего не нужно.
 
 Для bind mount каталог нужно создать заранее и вне дерева проекта, иначе

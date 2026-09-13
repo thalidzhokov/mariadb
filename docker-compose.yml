@@ -40,7 +40,7 @@ services:
       # compose соберет из них одно и то же имя и подхватит чужой том
       - mariadb-data:/var/lib/mysql
       # Резервные копии базы данных
-      - mariadb-dump:/var/www/dump
+      - mariadb-dump:/mariadb-dump
       # Инициализация базы данных
       # Пользователь debezium создается скриптом z0- из образа, поэтому папку
       # /docker-entrypoint-initdb.d целиком монтировать нельзя: монт-вольюм ее перекроет.

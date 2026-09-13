@@ -2,7 +2,7 @@
 
 # Скрипт для импорта базы данных из файла latest_<day_of_week>.sql.gz. 
 # Запускается в контейнере mariadb.
-# Импортирует базу данных MARIADB_DATABASE из файла /var/www/dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
+# Импортирует базу данных MARIADB_DATABASE из файла /mariadb-dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
 # На хосте файл ./docker_images/mariadb/dump/latest_<day_of_week>.sql.gz
 # Запуск в контейнере командой: bash scripts/import.sh
 # Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/import.sh
@@ -34,7 +34,7 @@ echo "# Импортируем базу данных..."
 # Проверяем существование файла дампа и берем самый свежий.
 # ls при отсутствии файлов завершается с ошибкой и из-за set -e обрывает
 # скрипт, не доходя до запасного варианта, поэтому ищем через find
-DUMP_DIR="${MARIADB_DUMP_DIR:-/var/www/dump}"
+DUMP_DIR="${MARIADB_DUMP_DIR:-/mariadb-dump}"
 DUMP_FILE=""
 
 if [ -d "$DUMP_DIR" ]; then

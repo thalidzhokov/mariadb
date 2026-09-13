@@ -2,7 +2,7 @@
 
 # Скрипт для экспорта базы данных в формате latest_<day_of_week>.sql.gz. 
 # Запускается в контейнере mariadb.
-# Делает экспорт базы данных MARIADB_DATABASE в файл /var/www/dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
+# Делает экспорт базы данных MARIADB_DATABASE в файл /mariadb-dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
 # На хосте файл ./docker_images/mariadb/dump/latest_<day_of_week>.sql.gz
 # Запуск в контейнере командой: bash scripts/export.sh
 # Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/export.sh
@@ -33,7 +33,7 @@ echo "# Создаем дамп базы данных..."
 
 # Определяем день недели (1=понедельник, 7=воскресенье)
 DAY_OF_WEEK=$(date +%u)
-DUMP_DIR="${MARIADB_DUMP_DIR:-/var/www/dump}"
+DUMP_DIR="${MARIADB_DUMP_DIR:-/mariadb-dump}"
 DUMP_FILE="${DUMP_DIR}/latest_${DAY_OF_WEEK}.sql.gz"
 
 # Проверяем директорию для дампов если её нет

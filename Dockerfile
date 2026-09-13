@@ -40,7 +40,7 @@ COPY init-templates/ /init-templates/
 COPY --chmod=0755 initdb.d/z0-debezium-user.sh /docker-entrypoint-initdb.d/z0-debezium-user.sh
 
 # Владелец mysql, чтобы свежий named volume унаследовал права от образа
-RUN mkdir -p /var/www/dump && chown mysql:mysql /var/www/dump
+RUN mkdir -p /mariadb-dump && chown mysql:mysql /mariadb-dump
 
 # Штатный healthcheck базового образа. Полная проверка прав и настроек
 # вынесена в scripts/healthcheck.sh и запускается по требованию
