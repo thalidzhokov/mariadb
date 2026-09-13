@@ -47,6 +47,8 @@ autotune() {
 }
 
 create_debezium_user_on_init() {
+    # file_env штатного энтрипоинта: разворачивает MARIADB_DEBEZIUM_PASSWORD_FILE
+    file_env 'MARIADB_DEBEZIUM_PASSWORD'
     if [ -z "${MARIADB_DEBEZIUM_PASSWORD:-}" ]; then
         echo "# MARIADB_DEBEZIUM_PASSWORD не задан, создание пользователя debezium пропущено"
         return 0

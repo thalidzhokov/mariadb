@@ -5,8 +5,9 @@
 
 Что добавлено к базовому образу:
 
-- расчет `innodb_buffer_pool_size`, `innodb_log_file_size`, `key_buffer_size` и
-  `innodb_io_capacity` при запуске контейнера, а не при сборке образа;
+- расчет `innodb_buffer_pool_size`, `innodb_log_file_size`, `key_buffer_size`,
+  `max_connections` и `innodb_io_capacity` при запуске контейнера, а не при
+  сборке образа;
 - конфиг с настройками бинлогов, slow log и performance_schema;
 - опциональный пользователь `debezium` с правами для CDC;
 - скрипты экспорта, импорта, пересоздания, оптимизации, бенчмарка и диагностики
@@ -39,11 +40,14 @@ docker run -d --name mariadb \
 Базовый образ поддерживает все свои переменные (`MARIADB_ROOT_PASSWORD`,
 `MARIADB_DATABASE`, `MARIADB_USER`, `MARIADB_PASSWORD`, `MARIADB_AUTO_UPGRADE`
 и остальные), включая варианты с суффиксом `_FILE` для docker secrets.
-Дополнительно:
+Энтрипоинт разворачивает `_FILE` только в своем процессе, поэтому скрипты
+обслуживания читают файлы сами через `scripts/env.sh`: для
+`MARIADB_ROOT_PASSWORD`, `MARIADB_DATABASE`, `MARIADB_USER`, `MARIADB_PASSWORD`
+и `MARIADB_DEBEZIUM_PASSWORD`. Дополнительно:
 
 | Переменная | По умолчанию | Назначение |
 | --- | --- | --- |
-| `MARIADB_DEBEZIUM_PASSWORD` | не задана | Пароль пользователя `debezium`. Пока не задана, пользователь не создается |
+| `MARIADB_DEBEZIUM_PASSWORD` | не задана | Пароль пользователя `debezium`, есть вариант `_FILE`. Пока не задана, пользователь не создается |
 | `MARIADB_AUTOTUNE` | `1` | `0` отключает расчет параметров целиком |
 | `MARIADB_AUTOTUNE_IO` | `1` | `0` отключает замер IOPS через fio |
 | `MARIADB_BUFFER_POOL_PERCENT` | `60` | Доля доступной памяти под buffer pool |
@@ -67,6 +71,12 @@ docker run -d --name mariadb \
 завышенные значения. Под buffer pool отводится 60% лимита, под redo log
 четверть buffer pool, нижние границы равны серверным дефолтам.
 
+`max_connections` считается от остатка после buffer pool: половина остатка
+делится на 8M, столько по `99-override.cnf` может занять одно соединение.
+Результат ограничен снизу 50 и сверху 250. Без лимита памяти у контейнера
+расчет идет от памяти хоста, поэтому на разделяемом хосте стоит задать
+`mem_limit` в compose.
+
 IOPS замеряются fio при первом запуске на томе данных: случайная запись блоком
 16K, поскольку `innodb_io_capacity` ограничивает именно фоновую запись
 страниц. Результат кешируется в `/var/lib/mysql/.autotune-io-capacity`, так что
@@ -85,7 +95,7 @@ IOPS замеряются fio при первом запуске на томе �
 
 | Скрипт | Назначение |
 | --- | --- |
-| `create.sh` | Создать базу и пользователя |
+| `create.sh` | Создать базу и пользователя, обновить его пароль |
 | `drop.sh` | Удалить базу |
 | `export.sh` | Дамп в `latest_<день недели>.sql.gz` |
 | `import.sh` | Импорт самого свежего дампа |

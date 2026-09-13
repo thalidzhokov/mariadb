@@ -6,6 +6,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 show_help() {
     echo "
 Использование: $(basename "$0") [ОПЦИИ]

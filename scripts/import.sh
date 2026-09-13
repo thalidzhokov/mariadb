@@ -9,6 +9,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 # Запускаем импорт базы данных
 echo "# Запускаем импорт базы данных..."
 

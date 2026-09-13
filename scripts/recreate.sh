@@ -18,6 +18,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 # Функция помощи
 show_help() {
     echo "

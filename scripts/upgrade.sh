@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 echo "# Запускаем обновление системных таблиц MariaDB..."
 
 # Проверяем наличие переменных окружения MARIADB_ROOT_PASSWORD

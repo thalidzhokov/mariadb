@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 # Запускаем удаление базы данных
 echo "# Запускаем удаление базы данных..."
 

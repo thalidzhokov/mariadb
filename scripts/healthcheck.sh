@@ -4,13 +4,8 @@
 
 set -euo pipefail
 
-# Пустые значения по умолчанию: иначе set -u обрывает скрипт на первой же
-# незаданной переменной, не давая напечатать понятную причину
-: "${MARIADB_ROOT_PASSWORD:=}"
-: "${MARIADB_USER:=}"
-: "${MARIADB_PASSWORD:=}"
-: "${MARIADB_DATABASE:=}"
-: "${MARIADB_DEBEZIUM_PASSWORD:=}"
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 : "${MARIADB_HEALTHCHECK_TABLE:=}"
 : "${MARIADB_HEALTHCHECK_INDEX:=}"
 
@@ -92,8 +87,9 @@ else
         echo "[ok] Пользователь debezium имеет права SELECT"
     fi
 
-    # Проверяем права debezium пользователя на RELOAD
-    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "FLUSH LOGS" >/dev/null 2>&1; then
+    # Проверяем права debezium пользователя на RELOAD.
+    # FLUSH PRIVILEGES требует того же права, но не ротирует бинлоги, как FLUSH LOGS
+    if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "FLUSH PRIVILEGES" >/dev/null 2>&1; then
         echo "[error] Пользователь debezium не имеет права RELOAD"
         exit 1
     else

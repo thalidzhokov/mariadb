@@ -9,6 +9,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 # Запускаем экспорт базы данных
 echo "# Запускаем экспорт базы данных..."
 

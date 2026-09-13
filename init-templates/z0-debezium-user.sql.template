@@ -23,9 +23,11 @@ GRANT REPLICATION SLAVE ON *.* TO 'debezium'@'%';
 GRANT BINLOG MONITOR ON *.* TO 'debezium'@'%';
 GRANT SLAVE MONITOR ON *.* TO 'debezium'@'%';
 
--- Права для работы с конкретной базой данных
-GRANT SELECT ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
-GRANT LOCK TABLES ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
+-- Права для работы с конкретной базой данных.
+-- В GRANT имя базы - шаблон, где _ значит любой символ, поэтому сюда
+-- подставляется имя с экранированным _
+GRANT SELECT ON `${MARIADB_DATABASE_GRANT}`.* TO 'debezium'@'%';
+GRANT LOCK TABLES ON `${MARIADB_DATABASE_GRANT}`.* TO 'debezium'@'%';
 
 -- Применяем изменения
 FLUSH PRIVILEGES;

@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
 echo "# Запускаем создание пользователя debezium..."
 
 TEMPLATE="/init-templates/z0-debezium-user.sql.template"
@@ -55,6 +57,7 @@ if [ -z "$PASSWORD_HASH" ]; then
 fi
 
 SQL="$(cat "$TEMPLATE")"
+SQL="${SQL//'${MARIADB_DATABASE_GRANT}'/${MARIADB_DATABASE//_/\\_}}"
 SQL="${SQL//'${MARIADB_DATABASE}'/$MARIADB_DATABASE}"
 SQL="${SQL//'${MARIADB_DEBEZIUM_PASSWORD_HASH}'/$PASSWORD_HASH}"
 
