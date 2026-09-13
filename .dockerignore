@@ -2,6 +2,7 @@
 .gitattributes
 .github
 .vscode
+tests
 .env
 docker-compose.yml
 README.md

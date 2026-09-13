@@ -13,7 +13,26 @@ env:
   MARIADB_VERSION: "11.8"
 
 jobs:
+  # Сборка под amd64 и прогон tests/run.sh на живом контейнере
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: MARIADB_VERSION=${{ env.MARIADB_VERSION }}
+          load: true
+          tags: ${{ env.IMAGE }}:test
+          cache-from: type=gha
+
+      - run: bash tests/run.sh ${{ env.IMAGE }}:test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

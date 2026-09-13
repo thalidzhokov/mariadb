@@ -149,3 +149,17 @@ docker exec -t mariadb bash scripts/create-debezium-user.sh
 docker build -t thalidzhokov/mariadb:11.8 .
 docker build --build-arg MARIADB_VERSION=11.4 -t thalidzhokov/mariadb:11.4 .
 ```
+
+## Проверка
+
+`tests/run.sh` поднимает контейнер из собранного образа и проверяет
+`HEALTHCHECK`, применение autotune, вход root и debezium по `*_FILE`, пароли с
+кавычкой и слешем, экранирование `_` в `GRANT`, `scripts/healthcheck.sh` без
+ротации бинлога и `recreate.sh` со сменой пароля. Контейнер и том удаляются
+по завершении.
+
+```bash
+bash tests/run.sh thalidzhokov/mariadb:11.8
+```
+
+В CI тесты идут перед публикацией образа.
