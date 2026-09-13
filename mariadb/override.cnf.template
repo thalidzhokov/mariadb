@@ -1,0 +1,100 @@
+# https://mariadb.com/docs/server/server-management/variables-and-modes/server-system-variables
+
+# https://mariadb.com/docs/server/server-management/variables-and-modes/full-list-of-mariadb-options-system-and-status-variables
+
+# https://mariadb.com/docs/server/server-usage/storage-engines/innodb/innodb-system-variables
+
+# https://mariadb.com/docs/server/reference/system-tables/performance-schema/performance-schema-system-variables
+
+[mysqld]
+
+# Global
+# default-storage-engine
+# Default Value: InnoDB
+# default-storage-engine = innodb
+sql_mode = STRICT_TRANS_TABLES,ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+max_connections = 250
+max_allowed_packet=256M
+# Расчет будет добавлен в конце файла во время сборки контейнера
+# key_buffer_size = 10% RAM
+# key_buffer_size = ${KEY_BUFFER_SIZE}
+
+# Per client settings
+sort_buffer_size = 4M
+read_buffer_size = 1M
+binlog_cache_size = 1M
+
+# Charset
+# collation_server
+# Default Value: latin1_swedish_ci
+collation_server = utf8mb4_unicode_ci
+# character_set_server
+# Default Value: utf8mb4 (>= MariaDB 11.6.0), latin1 (<= MariaDB 11.5)
+character_set_server = utf8mb4
+
+# Query cache
+# query_cache_type
+# Начиная с MariaDB 10.1.7, query_cache_type автоматически устанавливается в ON, если сервер запущен с query_cache_size, установленным в ненулевое (и не дефолтное) значение. 
+# Это произойдет даже если query_cache_type явно установлен в OFF в конфигурации.
+# Default Value: OFF
+# query_cache_type  = ON
+query_cache_type = OFF
+query_cache_limit = 4M
+query_cache_size = 0
+
+# Расчет будет добавлен в конце файла во время сборки контейнера
+# innodb_buffer_pool_size = 40% RAM  
+# innodb_log_file_size = 25% от innodb_buffer_pool_size
+# innodb_buffer_pool_size = ${INNODB_BUFFER_POOL_SIZE}
+# innodb_log_file_size = ${INNODB_LOG_FILE_SIZE}
+# innodb_io_capacity = ${INNODB_IO_CAPACITY}
+# innodb_io_capacity_max = ${INNODB_IO_CAPACITY_MAX}
+# innodb_thread_concurrency
+# Removed: MariaDB 10.6.0
+# innodb_thread_concurrency = 0
+
+# pmm
+performance_schema=ON
+performance-schema-instrument='statement/%=ON'
+performance-schema-consumer-statements-digest=ON
+innodb_monitor_enable=all
+# query_response_time_stats=ON
+userstat=ON
+
+# Медленные запросы
+# slow_query_log
+# Начиная с MariaDB 10.11.0 является алиасом для log_slow_query.
+# Default Value: 0
+slow_query_log = 1
+slow_query_log_file = /var/lib/mysql/mysql-slow.log
+# log-queries-not-using-indexes
+# Default Value: OFF
+
+# log_output
+# Default Value: FILE
+# Valid Values: TABLE, FILE or NONE
+# log_output=FILE
+long_query_time = 0.1
+min_examined_row_limit = 100
+
+# В MariaDB 11.8.6 опция log_slow_admin_statements=ON является устаревшей
+log_slow_filter=admin,filesort,filesort_on_disk,filesort_priority_queue,full_join,full_scan,query_cache,query_cache_miss,tmp_table,tmp_table_on_disk
+log_slow_slave_statements=ON
+log_slow_rate_limit=100
+
+# Debezium - Binary Logging Configuration
+log-bin = mysql-bin
+binlog_format = ROW
+binlog_row_image = FULL
+expire_logs_days = 30
+server-id = 1
+log_slave_updates = ON
+
+# Debezium - GTID Configuration для MySQL
+# gtid_mode = ON
+# enforce_gtid_consistency = ON
+
+# Debezium - GTID Configuration для MariaDB
+gtid_strict_mode = ON
+gtid_domain_id = 1
+

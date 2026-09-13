@@ -1,0 +1,46 @@
+services:
+  mariadb:
+    build:
+      context: ./infra/mariadb
+      args:
+        MARIADB_DATABASE: ${PANEL_DB_NAME}
+        # Кастом для debezium
+        MARIADB_DEBEZIUM_PASSWORD: ${PANEL_DB_DEBEZIUM_PASSWORD}
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: $PANEL_DB_ROOT_PASSWORD
+      MARIADB_DATABASE: $PANEL_DB_NAME
+      MARIADB_USER: $PANEL_DB_USER
+      MARIADB_PASSWORD: $PANEL_DB_PASSWORD
+      # Кастом для debezium
+      MARIADB_DEBEZIUM_PASSWORD: $PANEL_DB_DEBEZIUM_PASSWORD
+      # Кастом для проверки таблицы в healthcheck.sh
+      MARIADB_HEALTHCHECK_TABLE: ${PANEL_DB_HEALTHCHECK_TABLE:-}
+      # Дополнительно можем проверить PRIMARY KEY
+      # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
+      MARIADB_HEALTHCHECK_PRIMARY_KEY: ${PANEL_DB_HEALTHCHECK_PRIMARY_KEY:-}
+      # Автоматическое обновление базы данных
+      MARIADB_AUTO_UPGRADE: "1"
+      # Опционально, если не нужно создавать резервные копии перед обновлением
+      # MARIADB_DISABLE_UPGRADE_BACKUP: "1"
+    volumes:
+      - panel-mariadb:/var/lib/mysql
+      # Резервные копии базы данных
+      - ./infra/mariadb/panel-dump:/var/www/dump
+      # Инициализация базы данных
+      # При создании контейнера шаблоны из ./init-templates/ добавляются в папку /docker-entrypoint-initdb.d/
+      # Поэтому файлы для инициализации необходимо добавлять отдельными монт-вольмами
+      # - ./infra/mariadb/panel-init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
+      - ./infra/mariadb/panel-init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
+    sysctls:
+      - net.core.somaxconn=10000
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_NICE
+    healthcheck:
+      test: ["CMD", "bash", "./scripts/healthcheck.sh"]
+      # MySQLTuner в healthcheck.sh занимает ~15s
+      interval: 60s
+      timeout: 60s
+      retries: 50

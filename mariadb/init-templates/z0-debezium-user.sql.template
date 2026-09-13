@@ -1,0 +1,37 @@
+-- Скрипт инициализации пользователя debezium для MariaDB
+-- Выполняется автоматически при первом запуске контейнера через /docker-entrypoint-initdb.d/
+-- Префикс z0- обеспечивает выполнение ПОСЛЕ создания базы данных WordPress
+
+-- Проверяем, что база данных WordPress существует
+SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${MARIADB_DATABASE}' LIMIT 1;
+
+-- Создание пользователя debezium
+CREATE USER IF NOT EXISTS 'debezium'@'%' IDENTIFIED BY '${MARIADB_DEBEZIUM_PASSWORD}';
+
+-- Основные права для работы Debezium
+GRANT SELECT ON *.* TO 'debezium'@'%';
+GRANT RELOAD ON *.* TO 'debezium'@'%';
+GRANT SHOW DATABASES ON *.* TO 'debezium'@'%';
+GRANT REPLICATION SLAVE ON *.* TO 'debezium'@'%';
+-- GRANT REPLICATION CLIENT ON *.* TO 'debezium'@'%';
+-- В MariaDB 10.11+ REPLICATION CLIENT заменен на BINLOG MONITOR и SLAVE MONITOR
+GRANT BINLOG MONITOR ON *.* TO 'debezium'@'%';
+GRANT SLAVE MONITOR ON *.* TO 'debezium'@'%';
+
+-- Права для работы с конкретной базой данных WordPress
+GRANT SELECT ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
+GRANT LOCK TABLES ON `${MARIADB_DATABASE}`.* TO 'debezium'@'%';
+
+-- Применяем изменения
+FLUSH PRIVILEGES;
+
+-- Проверяем, что пользователь debezium существует
+SELECT 
+    User,
+    Host,
+    CASE 
+        WHEN User = 'debezium' THEN 'Пользователь debezium найден'
+        ELSE 'Пользователь не найден'
+    END AS STATUS
+FROM mysql.user 
+WHERE User = 'debezium' AND Host = '%';
