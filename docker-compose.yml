@@ -26,10 +26,10 @@ services:
       # Кастом для проверки таблицы в healthcheck.sh
       # Если таблица не указана, то проверка в healthcheck.sh не производится
       MARIADB_HEALTHCHECK_TABLE: ${MARIADB_HEALTHCHECK_TABLE:-}
-      # Дополнительно можем проверить PRIMARY KEY
+      # Дополнительно можем проверить наличие индекса, для первичного ключа это PRIMARY
       # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
-      # Если первичный ключ не указан, то проверка в healthcheck.sh не производится
-      MARIADB_HEALTHCHECK_PRIMARY_KEY: ${MARIADB_HEALTHCHECK_PRIMARY_KEY:-}
+      # Если индекс не указан, то проверка в healthcheck.sh не производится
+      MARIADB_HEALTHCHECK_INDEX: ${MARIADB_HEALTHCHECK_INDEX:-}
       # Расчет параметров при запуске контейнера
       # MARIADB_AUTOTUNE=0 отключает расчет целиком, MARIADB_AUTOTUNE_IO=0 - только замер IOPS
       # MARIADB_AUTOTUNE: "1"

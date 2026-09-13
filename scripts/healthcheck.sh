@@ -12,7 +12,7 @@ set -euo pipefail
 : "${MARIADB_DATABASE:=}"
 : "${MARIADB_DEBEZIUM_PASSWORD:=}"
 : "${MARIADB_HEALTHCHECK_TABLE:=}"
-: "${MARIADB_HEALTHCHECK_PRIMARY_KEY:=}"
+: "${MARIADB_HEALTHCHECK_INDEX:=}"
 
 # root
 # Все проверки связанные с пользователем делаются под пользователем
@@ -164,17 +164,18 @@ else
     else
         echo "[ok] Таблица $MARIADB_HEALTHCHECK_TABLE существует"
 
-        # Проверяем что у таблицы MARIADB_HEALTHCHECK_TABLE есть MARIADB_HEALTHCHECK_PRIMARY_KEY
-        if [ -z "$MARIADB_HEALTHCHECK_PRIMARY_KEY" ]; then
-            echo "[skip] Переменная окружения MARIADB_HEALTHCHECK_PRIMARY_KEY не установлена"
+        # Проверяем что у таблицы MARIADB_HEALTHCHECK_TABLE есть индекс MARIADB_HEALTHCHECK_INDEX.
+        # Имя первичного ключа в MariaDB всегда PRIMARY, вторичные индексы называются как заданы
+        if [ -z "$MARIADB_HEALTHCHECK_INDEX" ]; then
+            echo "[skip] Переменная окружения MARIADB_HEALTHCHECK_INDEX не установлена"
         else
-            echo "[ok] Переменная окружения MARIADB_HEALTHCHECK_PRIMARY_KEY установлена"
+            echo "[ok] Переменная окружения MARIADB_HEALTHCHECK_INDEX установлена"
 
-            if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "USE $MARIADB_DATABASE; SHOW KEYS FROM $MARIADB_HEALTHCHECK_TABLE WHERE Key_name = '$MARIADB_HEALTHCHECK_PRIMARY_KEY'" 2>/dev/null | grep -q "$MARIADB_HEALTHCHECK_PRIMARY_KEY"; then
-                echo "[error] У таблицы $MARIADB_HEALTHCHECK_TABLE нет $MARIADB_HEALTHCHECK_PRIMARY_KEY PRIMARY KEY"
+            if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "USE $MARIADB_DATABASE; SHOW KEYS FROM $MARIADB_HEALTHCHECK_TABLE WHERE Key_name = '$MARIADB_HEALTHCHECK_INDEX'" 2>/dev/null | grep -q "$MARIADB_HEALTHCHECK_INDEX"; then
+                echo "[error] У таблицы $MARIADB_HEALTHCHECK_TABLE нет индекса $MARIADB_HEALTHCHECK_INDEX"
                 exit 1
             else
-                echo "[ok] У таблицы $MARIADB_HEALTHCHECK_TABLE есть $MARIADB_HEALTHCHECK_PRIMARY_KEY PRIMARY KEY"
+                echo "[ok] У таблицы $MARIADB_HEALTHCHECK_TABLE есть индекс $MARIADB_HEALTHCHECK_INDEX"
             fi
         fi
     fi
