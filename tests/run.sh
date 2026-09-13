@@ -112,6 +112,23 @@ buffer_pool_from_limit() {
 }
 check "innodb_buffer_pool_size больше дефолта" buffer_pool_from_limit
 
+flush_neighbors_applied() {
+    local cnf live
+    cnf="$(docker exec "$NAME" sed -n 's/^innodb_flush_neighbors=//p' /etc/mysql/conf.d/95-autotune.cnf)"
+    live="$(sql_root "SELECT @@innodb_flush_neighbors")"
+    echo "cnf=$cnf live=$live"
+    [ -n "$cnf" ] && [ "$cnf" = "$live" ]
+}
+check "innodb_flush_neighbors из autotune применен сервером" flush_neighbors_applied
+
+flush_neighbors_override() {
+    local out
+    out="$(docker exec -e MARIADB_INNODB_FLUSH_NEIGHBORS=1 "$NAME" bash /autotune/flush-neighbors.sh)"
+    echo "$out"
+    echo "$out" | grep -qE '^innodb_flush_neighbors=1$'
+}
+check "MARIADB_INNODB_FLUSH_NEIGHBORS перекрывает автодетект" flush_neighbors_override
+
 # Пользователи после первой инициализации
 echo "# Пользователи"
 check "root: пароль из MARIADB_ROOT_PASSWORD_FILE" sql_root "SELECT 1"

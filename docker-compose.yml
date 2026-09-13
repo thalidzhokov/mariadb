@@ -35,6 +35,8 @@ services:
       # MARIADB_AUTOTUNE: "1"
       # MARIADB_AUTOTUNE_IO: "1"
       # MARIADB_BUFFER_POOL_PERCENT: "60"
+      # innodb_flush_neighbors: авто по типу диска, вручную 0|1|2
+      # MARIADB_INNODB_FLUSH_NEIGHBORS: "0"
     volumes:
       # Имя тома не должно совпадать с именем каталога проекта:
       # compose соберет из них одно и то же имя и подхватит чужой том

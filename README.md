@@ -6,8 +6,8 @@
 Что добавлено к базовому образу:
 
 - расчет `innodb_buffer_pool_size`, `innodb_log_file_size`, `key_buffer_size`,
-  `max_connections` и `innodb_io_capacity` при запуске контейнера, а не при
-  сборке образа;
+  `max_connections`, `innodb_io_capacity` и `innodb_flush_neighbors` при запуске
+  контейнера, а не при сборке образа;
 - конфиг с настройками бинлогов, slow log и performance_schema;
 - опциональный пользователь `debezium` с правами для CDC;
 - скрипты экспорта, импорта, пересоздания, оптимизации, бенчмарка и диагностики
@@ -58,6 +58,7 @@ docker run -d --name mariadb \
 | `MARIADB_KEY_BUFFER_SIZE_MB` | `32` | `key_buffer_size` в мегабайтах |
 | `MARIADB_AUTOTUNE_FIO_RUNTIME` | `30` | Длительность замера IOPS в секундах |
 | `MARIADB_AUTOTUNE_FIO_FORCE` | не задана | Повторить замер IOPS, игнорируя кеш |
+| `MARIADB_INNODB_FLUSH_NEIGHBORS` | авто | `0` / `1` / `2` — ручной `innodb_flush_neighbors`. Без переменной: HDD → `1`, SSD/неизвестно → `0` |
 | `MARIADB_DUMP_DIR` | `/mariadb-dump` | Каталог для дампов |
 | `MARIADB_HEALTHCHECK_TABLE` | не задана | Таблица, наличие которой проверяет `scripts/healthcheck.sh` |
 | `MARIADB_HEALTHCHECK_INDEX` | не задана | Имя индекса в этой таблице, у первичного ключа это всегда `PRIMARY` |
@@ -87,6 +88,15 @@ IOPS замеряются fio при первом запуске на томе �
 повторные запуски проходят без замера. `innodb_io_capacity` берется как треть
 измеренных IOPS, `innodb_io_capacity_max` не опускается ниже серверного
 дефолта 2000.
+
+`innodb_flush_neighbors` выбирается по `queue/rotational` устройства тома
+данных: на HDD (`1`) оставляем сброс соседей, на SSD/NVMe и когда тип не
+определился — `0`. Значение можно задать явно через
+`MARIADB_INNODB_FLUSH_NEIGHBORS`:
+
+- `0` — сбрасывать только нужную грязную страницу (SSD/NVMe);
+- `1` — ещё непрерывных соседей рядом (обычно достаточно для HDD);
+- `2` — всех грязных страниц из того же extent (агрессивно, почти не нужен).
 
 Порядок чтения конфигов: `/etc/mysql/conf.d/` подключается после
 `/etc/mysql/mariadb.conf.d/`, поэтому `95-autotune.cnf` и `99-override.cnf`

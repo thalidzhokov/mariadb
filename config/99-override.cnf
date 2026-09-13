@@ -39,8 +39,9 @@ query_cache_type = OFF
 query_cache_limit = 4M
 query_cache_size = 0
 
-# innodb_buffer_pool_size, innodb_log_file_size, innodb_io_capacity и
-# innodb_io_capacity_max считаются при запуске контейнера в 95-autotune.cnf
+# innodb_buffer_pool_size, innodb_log_file_size, innodb_io_capacity,
+# innodb_io_capacity_max и innodb_flush_neighbors считаются при запуске
+# контейнера в 95-autotune.cnf
 # innodb_thread_concurrency
 # Removed: MariaDB 10.6.0
 # innodb_thread_concurrency = 0
@@ -56,10 +57,6 @@ userstat=ON
 # Deadlock logging (MySQLTuner)
 # Default Value: OFF
 innodb_print_all_deadlocks = ON
-
-# На SSD/NVMe сброс соседних dirty-страниц только лишняя работа
-# Default Value: 1
-innodb_flush_neighbors = 0
 
 # Медленные запросы
 # slow_query_log

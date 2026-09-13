@@ -30,6 +30,7 @@ autotune() {
         echo "# Файл создается при каждом запуске контейнера, правки не сохраняются"
         echo "[mysqld]"
         bash /autotune/memory.sh
+        bash /autotune/flush-neighbors.sh
         if [ "${MARIADB_AUTOTUNE_IO:-1}" != "0" ]; then
             bash /autotune/io-capacity-fio.sh
         fi
