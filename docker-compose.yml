@@ -41,7 +41,10 @@ services:
       - mariadb-data:/var/lib/mysql
       # Резервные копии базы данных
       - mariadb-dump:/mariadb-dump
-      # Инициализация базы данных (опционально)
+      # Инициализация базы данных: выполняется один раз, при первой инициализации тома.
+      # Тестовая таблица test_table с индексом idx_test_table_name, на нее же
+      # настроены MARIADB_HEALTHCHECK_TABLE и MARIADB_HEALTHCHECK_INDEX в .env
+      - ./init/test_init.sql:/docker-entrypoint-initdb.d/test_init.sql
       # - ./init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
       # - ./init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
     sysctls:

@@ -12,6 +12,7 @@ set -euo pipefail
 IMAGE="${1:-thalidzhokov/mariadb:11.8}"
 NAME="mariadb-test-$$"
 WORK_DIR="$(mktemp -d)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 ROOT_PASSWORD="root-p@ss'word\\1"
 APP_PASSWORD="app-p@ss'word\\2"
@@ -63,10 +64,13 @@ docker create --name "$NAME" \
     -e MARIADB_USER="$USER" \
     -e MARIADB_PASSWORD="$APP_PASSWORD" \
     -e MARIADB_DEBEZIUM_PASSWORD_FILE=/run/secrets/debezium \
+    -e MARIADB_HEALTHCHECK_TABLE=test_table \
+    -e MARIADB_HEALTHCHECK_INDEX=idx_test_table_name \
     -e MARIADB_AUTOTUNE_FIO_SIZE=64M \
     -e MARIADB_AUTOTUNE_FIO_RUNTIME=5 \
     "$IMAGE" > /dev/null
 docker cp "$WORK_DIR/secrets" "$NAME:/run/"
+docker cp "$REPO_DIR/init/test_init.sql" "$NAME:/docker-entrypoint-initdb.d/"
 docker start "$NAME" > /dev/null
 
 wait_healthy() {
@@ -122,7 +126,18 @@ grant_escaped() {
 }
 check "debezium: _ в GRANT экранирован" grant_escaped debezium
 
-# Полный healthcheck.sh: читает *_FILE через env.sh и не должен ротировать бинлог
+# Инициализация из /docker-entrypoint-initdb.d
+echo "# init/test_init.sql"
+test_table_rows() {
+    local rows
+    rows="$(sql_as "$USER" "$APP_PASSWORD" "SELECT COUNT(*) FROM \`$DATABASE\`.test_table")"
+    echo "rows=$rows"
+    [ "$rows" = "5" ]
+}
+check "test_table создана в $DATABASE с данными" test_table_rows
+
+# Полный healthcheck.sh: читает *_FILE через env.sh, проверяет таблицу и индекс
+# из init и не должен ротировать бинлог
 echo "# scripts/healthcheck.sh"
 healthcheck_keeps_binlog() {
     local before after
@@ -133,9 +148,10 @@ healthcheck_keeps_binlog() {
     }
     after="$(sql_root "SHOW BINLOG STATUS" | cut -f1)"
     echo "binlog before=$before after=$after"
-    [ "$before" = "$after" ]
+    grep -q 'есть индекс idx_test_table_name' "$WORK_DIR/healthcheck.log" \
+        && [ "$before" = "$after" ]
 }
-check "healthcheck.sh проходит и не ротирует бинлог" healthcheck_keeps_binlog
+check "healthcheck.sh проходит, видит индекс и не ротирует бинлог" healthcheck_keeps_binlog
 
 # recreate.sh с новым паролем: экспорт под старым, затем пересоздание без экспорта
 echo "# scripts/recreate.sh"

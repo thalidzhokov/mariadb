@@ -27,7 +27,11 @@ docker run -d --name mariadb \
 ```
 
 Через compose: скопировать `docker-compose.yml` и `.env`, заменить пароли,
-запустить `docker compose up -d`.
+запустить `docker compose up -d`. В compose подключен `init/test_init.sql`:
+таблица `test_table` с данными и индексом `idx_test_table_name`, на нее же в
+`.env` настроены `MARIADB_HEALTHCHECK_TABLE` и `MARIADB_HEALTHCHECK_INDEX`.
+Файлы из `/docker-entrypoint-initdb.d` выполняются один раз, при первой
+инициализации тома, в базе `MARIADB_DATABASE`.
 
 На томе, созданном образом без пользователей healthcheck, нужен
 `MARIADB_AUTO_UPGRADE=1`: именно он их создает. Без него `HEALTHCHECK`
@@ -154,8 +158,9 @@ docker build --build-arg MARIADB_VERSION=11.4 -t thalidzhokov/mariadb:11.4 .
 
 `tests/run.sh` поднимает контейнер из собранного образа и проверяет
 `HEALTHCHECK`, применение autotune, вход root и debezium по `*_FILE`, пароли с
-кавычкой и слешем, экранирование `_` в `GRANT`, `scripts/healthcheck.sh` без
-ротации бинлога и `recreate.sh` со сменой пароля. Контейнер и том удаляются
+кавычкой и слешем, экранирование `_` в `GRANT`, инициализацию из
+`init/test_init.sql`, `scripts/healthcheck.sh` с проверкой таблицы и индекса
+без ротации бинлога и `recreate.sh` со сменой пароля. Контейнер и том удаляются
 по завершении.
 
 ```bash
