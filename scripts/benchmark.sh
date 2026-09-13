@@ -15,7 +15,8 @@ show_help() {
 Скрипт снимает baseline метрики и прогоняет mariadb-slap (read/write/mixed).
 
 ОПЦИИ:
-  --db <name>              Целевая БД для снятия метрик (по умолчанию: MARIADB_DATABASE)
+  --db <name>              Целевая БД: проверка существования и метки в отчете
+                           (по умолчанию: MARIADB_DATABASE)
   --bench-db <name>        БД для mariadb-slap (по умолчанию: bench_slap)
   --out-dir <path>         Директория для отчетов (по умолчанию: /tmp/db-bench/<timestamp>)
   --concurrency <list>     Конкурентность, напр. 10,50,100
@@ -102,6 +103,23 @@ if [ -z "$TARGET_DB" ]; then
     exit 1
 fi
 
+# Пароль не в argv: иначе виден в списке процессов
+CLIENT_CNF="$(mktemp)"
+chmod 600 "$CLIENT_CNF"
+printf "[client]\nuser=root\npassword=%s\n" "$MARIADB_ROOT_PASSWORD" > "$CLIENT_CNF"
+trap 'rm -f "$CLIENT_CNF"' EXIT
+
+mariadb_root() {
+    mariadb --defaults-extra-file="$CLIENT_CNF" "$@"
+}
+
+if ! mariadb_root -N -s -e \
+    "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$TARGET_DB'" \
+    | grep -qx '1'; then
+    echo "ОШИБКА: База данных $TARGET_DB не существует"
+    exit 1
+fi
+
 mkdir -p "$OUT_DIR"
 
 echo "# Бенчмарк MariaDB"
@@ -112,8 +130,15 @@ echo "# Итераций: $ITERATIONS"
 echo "# Отчеты: $OUT_DIR"
 
 echo "# [1/7] Снимаем baseline переменные и статус..."
-mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "
+{
+    echo "-- target_db=$TARGET_DB"
+    mariadb_root -e "
 SELECT NOW() as ts, VERSION() as version;
+SELECT SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$TARGET_DB';
+SELECT COUNT(*) AS table_count
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = '$TARGET_DB' AND TABLE_TYPE = 'BASE TABLE';
 SHOW VARIABLES WHERE Variable_name IN (
 'max_connections','sort_buffer_size','read_buffer_size','read_rnd_buffer_size',
 'join_buffer_size','binlog_cache_size','tmp_table_size','max_heap_table_size',
@@ -127,12 +152,13 @@ SHOW GLOBAL STATUS WHERE Variable_name IN (
 'Innodb_buffer_pool_reads','Innodb_buffer_pool_read_requests',
 'Innodb_row_lock_waits','Innodb_row_lock_time','Created_tmp_disk_tables',
 'Slow_queries','Aborted_connects','Aborted_clients'
-);" > "${OUT_DIR}/01-vars-status-before.txt"
+);"
+} > "${OUT_DIR}/01-vars-status-before.txt"
 
 if [ "$RUN_TUNER" = "1" ]; then
     if [ -f "/mysqltuner.pl" ]; then
         echo "# [2/7] Запускаем mysqltuner..."
-        perl /mysqltuner.pl --user root --pass "$MARIADB_ROOT_PASSWORD" --noask --nocolor > "${OUT_DIR}/02-mysqltuner-before.txt"
+        perl /mysqltuner.pl --defaults-file="$CLIENT_CNF" --noask --nocolor > "${OUT_DIR}/02-mysqltuner-before.txt"
     else
         echo "# [2/7] mysqltuner.pl не найден, шаг пропущен"
     fi
@@ -141,11 +167,11 @@ else
 fi
 
 echo "# [3/7] Сбрасываем status counters..."
-mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "FLUSH STATUS;"
+mariadb_root -e "FLUSH STATUS;"
 
 echo "# [4/7] READ benchmark..."
 mariadb-slap \
-  --user=root --password="$MARIADB_ROOT_PASSWORD" --host=127.0.0.1 --port=3306 \
+  --defaults-extra-file="$CLIENT_CNF" --host=127.0.0.1 --port=3306 \
   --create-schema="$BENCH_DB" \
   --concurrency="$CONCURRENCY" --iterations="$ITERATIONS" --number-of-queries="$READ_QUERIES" \
   --auto-generate-sql --auto-generate-sql-load-type=read --auto-generate-sql-add-autoincrement \
@@ -153,7 +179,7 @@ mariadb-slap \
 
 echo "# [5/7] WRITE benchmark..."
 mariadb-slap \
-  --user=root --password="$MARIADB_ROOT_PASSWORD" --host=127.0.0.1 --port=3306 \
+  --defaults-extra-file="$CLIENT_CNF" --host=127.0.0.1 --port=3306 \
   --create-schema="$BENCH_DB" \
   --concurrency="$CONCURRENCY" --iterations="$ITERATIONS" --number-of-queries="$WRITE_QUERIES" \
   --auto-generate-sql --auto-generate-sql-load-type=write --auto-generate-sql-add-autoincrement \
@@ -161,14 +187,14 @@ mariadb-slap \
 
 echo "# [6/7] MIXED benchmark..."
 mariadb-slap \
-  --user=root --password="$MARIADB_ROOT_PASSWORD" --host=127.0.0.1 --port=3306 \
+  --defaults-extra-file="$CLIENT_CNF" --host=127.0.0.1 --port=3306 \
   --create-schema="$BENCH_DB" \
   --concurrency="$CONCURRENCY" --iterations="$ITERATIONS" --number-of-queries="$MIXED_QUERIES" \
   --auto-generate-sql --auto-generate-sql-load-type=mixed --auto-generate-sql-add-autoincrement \
   > "${OUT_DIR}/05-mixed.txt"
 
 echo "# [7/7] Снимаем статус после бенчмарков..."
-mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "
+mariadb_root -e "
 SHOW GLOBAL STATUS WHERE Variable_name IN (
 'Threads_connected','Threads_running','Max_used_connections',
 'Questions','Queries','Com_select','Com_insert','Com_update','Com_delete',

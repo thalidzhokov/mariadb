@@ -11,6 +11,20 @@ set -euo pipefail
 BUFFER_POOL_PERCENT="${MARIADB_BUFFER_POOL_PERCENT:-60}"
 KEY_BUFFER_SIZE_MB="${MARIADB_KEY_BUFFER_SIZE_MB:-32}"
 
+# Доля памяти: только целые 1..90, иначе дефолт
+case "$BUFFER_POOL_PERCENT" in
+    ''|*[!0-9]*)
+        echo "# MARIADB_BUFFER_POOL_PERCENT=${BUFFER_POOL_PERCENT}: ожидается целое 1..90, берем 60" >&2
+        BUFFER_POOL_PERCENT=60
+        ;;
+    *)
+        if [ "$BUFFER_POOL_PERCENT" -lt 1 ] || [ "$BUFFER_POOL_PERCENT" -gt 90 ]; then
+            echo "# MARIADB_BUFFER_POOL_PERCENT=${BUFFER_POOL_PERCENT}: вне 1..90, берем 60" >&2
+            BUFFER_POOL_PERCENT=60
+        fi
+        ;;
+esac
+
 # /proc/meminfo внутри контейнера показывает память хоста, а не лимит контейнера,
 # поэтому лимит читаем из cgroup и падаем на MemTotal только когда лимита нет
 memory_limit_mb() {

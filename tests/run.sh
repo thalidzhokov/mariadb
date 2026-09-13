@@ -105,12 +105,14 @@ max_connections_applied() {
 check "max_connections из autotune применен сервером" max_connections_applied
 
 buffer_pool_from_limit() {
-    local live
+    local live expected_min
     live="$(sql_root "SELECT @@innodb_buffer_pool_size")"
-    echo "innodb_buffer_pool_size=$live"
-    [ "$live" -gt $((128 * 1024 * 1024)) ]
+    # 2G cgroup, 60% → ~1.2G; нижняя граница проверки с запасом от дефолта 128M
+    expected_min=$((1024 * 1024 * 1024))
+    echo "innodb_buffer_pool_size=$live min=$expected_min"
+    [ "$live" -ge "$expected_min" ]
 }
-check "innodb_buffer_pool_size больше дефолта" buffer_pool_from_limit
+check "innodb_buffer_pool_size ≈ 60% от лимита 2G" buffer_pool_from_limit
 
 flush_neighbors_applied() {
     local cnf live
@@ -128,6 +130,60 @@ flush_neighbors_override() {
     echo "$out" | grep -qE '^innodb_flush_neighbors=1$'
 }
 check "MARIADB_INNODB_FLUSH_NEIGHBORS перекрывает автодетект" flush_neighbors_override
+
+io_capacity_applied() {
+    local cnf_cap cnf_max live_cap live_max
+    cnf_cap="$(docker exec "$NAME" sed -n 's/^innodb_io_capacity=//p' /etc/mysql/conf.d/95-autotune.cnf)"
+    cnf_max="$(docker exec "$NAME" sed -n 's/^innodb_io_capacity_max=//p' /etc/mysql/conf.d/95-autotune.cnf)"
+    live_cap="$(sql_root "SELECT @@innodb_io_capacity")"
+    live_max="$(sql_root "SELECT @@innodb_io_capacity_max")"
+    echo "cnf=$cnf_cap/$cnf_max live=$live_cap/$live_max"
+    [ -n "$cnf_cap" ] && [ -n "$cnf_max" ] \
+        && [ "$cnf_cap" = "$live_cap" ] && [ "$cnf_max" = "$live_max" ] \
+        && [ "$cnf_cap" -ge 100 ] && [ "$cnf_max" -ge 2000 ]
+}
+check "innodb_io_capacity из fio применен сервером" io_capacity_applied
+
+buffer_pool_percent_clamped() {
+    local out
+    out="$(docker exec -e MARIADB_BUFFER_POOL_PERCENT=999 "$NAME" bash /autotune/memory.sh 2>&1)"
+    echo "$out"
+    echo "$out" | grep -q 'доля под buffer pool: 60%'
+}
+check "MARIADB_BUFFER_POOL_PERCENT вне 1..90 → 60" buffer_pool_percent_clamped
+
+# Повторный вызов autotune() из entrypoint без перезапуска mariadbd
+run_entrypoint_autotune() {
+    local docker_env=()
+    local item
+    for item in "$@"; do
+        docker_env+=(-e "$item")
+    done
+    docker exec "${docker_env[@]}" "$NAME" bash -c '
+        set -euo pipefail
+        eval "$(awk "/^AUTOTUNE_CNF=/{k=1} k{print} /^autotune\\(\\)/{f=1} f && /^}$/{exit}" /usr/local/bin/entrypoint.sh)"
+        autotune
+    '
+}
+
+autotune_off_clears_cnf() {
+    docker exec "$NAME" test -f /etc/mysql/conf.d/95-autotune.cnf
+    run_entrypoint_autotune MARIADB_AUTOTUNE=0
+    ! docker exec "$NAME" test -e /etc/mysql/conf.d/95-autotune.cnf
+}
+check "MARIADB_AUTOTUNE=0 удаляет 95-autotune.cnf" autotune_off_clears_cnf
+
+autotune_min_mb_clears_cnf() {
+    # Восстанавливаем cnf после предыдущего теста
+    run_entrypoint_autotune MARIADB_AUTOTUNE=1 MARIADB_AUTOTUNE_FIO_SIZE=64M MARIADB_AUTOTUNE_FIO_RUNTIME=5
+    docker exec "$NAME" test -f /etc/mysql/conf.d/95-autotune.cnf
+    run_entrypoint_autotune MARIADB_AUTOTUNE_MIN_MB=999999
+    ! docker exec "$NAME" test -e /etc/mysql/conf.d/95-autotune.cnf
+}
+check "лимит ниже MARIADB_AUTOTUNE_MIN_MB удаляет 95-autotune.cnf" autotune_min_mb_clears_cnf
+
+# Снова пишем cnf для остальных проверок (сервер уже с прежними значениями в памяти)
+run_entrypoint_autotune MARIADB_AUTOTUNE=1 MARIADB_AUTOTUNE_FIO_SIZE=64M MARIADB_AUTOTUNE_FIO_RUNTIME=5 >/dev/null
 
 # Пользователи после первой инициализации
 echo "# Пользователи"

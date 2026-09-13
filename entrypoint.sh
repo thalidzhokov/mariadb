@@ -58,8 +58,8 @@ autotune() {
             bash /autotune/io-capacity-fio.sh
         fi
     } > "$tmp"; then
-        echo "[autotune] расчет не удался, применяются значения по умолчанию"
         rm -f "$tmp"
+        clear_autotune_cnf "расчет не удался, применяются значения по умолчанию"
         return 0
     fi
 

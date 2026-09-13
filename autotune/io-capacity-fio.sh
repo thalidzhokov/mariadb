@@ -34,7 +34,8 @@ fi
 # innodb_io_capacity ограничивает фоновую запись страниц, поэтому меряем
 # случайную запись блоком в размер страницы InnoDB. Случайное чтение,
 # особенно на потребительских SSD, завышает оценку записи в разы.
-WRITE_IOPS="$(fio --name=autotune-randwrite \
+# --time_based: иначе на SSD fio часто заканчивается по --size раньше runtime
+FIO_OUT="$(fio --name=autotune-randwrite \
     --ioengine=libaio \
     --iodepth=32 \
     --rw=randwrite \
@@ -43,8 +44,21 @@ WRITE_IOPS="$(fio --name=autotune-randwrite \
     --size="$FIO_SIZE" \
     --numjobs=1 \
     --runtime="$FIO_RUNTIME" \
+    --time_based \
     --group_reporting \
-    --filename="$TEST_FILE" 2>/dev/null | grep -m1 'iops.*avg' | sed 's/.*avg=\([0-9.]*\).*/\1/')"
+    --filename="$TEST_FILE" 2>/dev/null || true)"
+
+# Сначала строка "iops ... avg=1234.5"; иначе краткий "IOPS=12.3k"
+WRITE_IOPS="$(printf '%s\n' "$FIO_OUT" | grep -m1 -E '[[:space:]]iops[[:space:]].*avg=' \
+    | sed -n 's/.*avg=\([0-9.]*\).*/\1/p')"
+if [ -z "$WRITE_IOPS" ]; then
+    WRITE_IOPS="$(printf '%s\n' "$FIO_OUT" | grep -m1 -oiE 'IOPS=[0-9.]+[kKmM]?' \
+        | head -n1 | cut -d= -f2)"
+    case "$WRITE_IOPS" in
+        *[kK]) WRITE_IOPS="$(printf '%.0f' "$(echo "${WRITE_IOPS%[kK]} * 1000" | bc -l)")" ;;
+        *[mM]) WRITE_IOPS="$(printf '%.0f' "$(echo "${WRITE_IOPS%[mM]} * 1000000" | bc -l)")" ;;
+    esac
+fi
 
 if [ -z "$WRITE_IOPS" ]; then
     echo "# Замер IOPS не удался, innodb_io_capacity оставлен по умолчанию"

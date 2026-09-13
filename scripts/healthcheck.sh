@@ -124,7 +124,7 @@ else
     fi
 
     # Проверяем права debezium пользователя на REPLICATION SLAVE
-    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "REPLICATION SLAVE"; then
+    if ! printf '%s\n' "$debezium_grants" | grep -qi "REPLICATION SLAVE"; then
         echo "[error] Пользователь debezium не имеет права REPLICATION SLAVE"
         exit 1
     else
@@ -132,11 +132,25 @@ else
     fi
 
     # Проверяем права debezium пользователя на REPLICATION CLIENT (в MariaDB 10.11+ это BINLOG MONITOR)
-    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW GRANTS FOR 'debezium'@'%'" 2>/dev/null | grep -qi "BINLOG MONITOR\|REPLICATION CLIENT"; then
+    if ! printf '%s\n' "$debezium_grants" | grep -qi "BINLOG MONITOR\|REPLICATION CLIENT"; then
         echo "[error] Пользователь debezium не имеет права REPLICATION CLIENT/BINLOG MONITOR"
         exit 1
     else
         echo "[ok] Пользователь debezium имеет права REPLICATION CLIENT/BINLOG MONITOR"
+    fi
+
+    if ! printf '%s\n' "$debezium_grants" | grep -qi "SLAVE MONITOR"; then
+        echo "[error] Пользователь debezium не имеет права SLAVE MONITOR"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет права SLAVE MONITOR"
+    fi
+
+    if ! printf '%s\n' "$debezium_grants" | grep -F "\`${db_grant}\`.*" | grep -qi 'LOCK TABLES'; then
+        echo "[error] Пользователь debezium не имеет GRANT LOCK TABLES ON \`${db_grant}\`.*"
+        exit 1
+    else
+        echo "[ok] Пользователь debezium имеет GRANT LOCK TABLES ON \`${db_grant}\`.*"
     fi
 
     # Проверка binary logging

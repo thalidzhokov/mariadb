@@ -55,7 +55,7 @@ docker run -d --name mariadb \
 | `MARIADB_AUTOTUNE` | `1` | `0` отключает расчет параметров целиком |
 | `MARIADB_AUTOTUNE_MIN_MB` | `512` | Ниже этого лимита cgroup (МБ) расчет не выполняется, остается конфиг сервера. Рекомендуемый минимум для образа |
 | `MARIADB_AUTOTUNE_IO` | `1` | `0` отключает замер IOPS через fio |
-| `MARIADB_BUFFER_POOL_PERCENT` | `60` | Доля доступной памяти под buffer pool |
+| `MARIADB_BUFFER_POOL_PERCENT` | `60` | Доля доступной памяти под buffer pool (целое 1..90; иначе 60) |
 | `MARIADB_KEY_BUFFER_SIZE_MB` | `32` | `key_buffer_size` в мегабайтах |
 | `MARIADB_AUTOTUNE_FIO_SIZE` | `1G` | Размер тестового файла fio в томе данных |
 | `MARIADB_AUTOTUNE_FIO_RUNTIME` | `30` | Длительность замера IOPS в секундах |
@@ -123,8 +123,8 @@ IOPS замеряются fio при первом запуске на томе �
 | `create.sh` | Создать базу и пользователя, обновить его пароль |
 | `drop.sh` | Удалить базу |
 | `export.sh` | Дамп в `latest_<день недели>.sql.gz` |
-| `import.sh` | Импорт самого свежего дампа |
-| `recreate.sh` | Удаление, создание, импорт последнего дампа, пользователь debezium. С `--export` сначала снимает свежий дамп |
+| `import.sh` | Импорт самого свежего `latest_*.sql.gz`; если нет — `/docker-entrypoint-initdb.d/latest.sql.gz` |
+| `recreate.sh` | Удаление, создание, импорт последнего дампа; `debezium` только если задан пароль. С `--export` сначала снимает свежий дамп (нужен до смены `MARIADB_PASSWORD`) |
 | `create-debezium-user.sh` | Создать или обновить пользователя `debezium` |
 | `upgrade.sh` | `mariadb-upgrade` системных таблиц |
 | `optimize.sh` | `OPTIMIZE TABLE` по всем таблицам базы |

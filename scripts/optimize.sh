@@ -67,7 +67,8 @@ while IFS= read -r table; do
             echo "# Таблица $table оптимизирована успешно. ОК!"
             OPTIMIZED=$((OPTIMIZED + 1))
         else
-            echo "# ВНИМАНИЕ! Таблица $table: $(echo "$RESULT" | grep "$table" | awk '{print $4}')"
+            echo "# ОШИБКА! Неожиданный ответ OPTIMIZE для $table: $RESULT"
+            FAILED=$((FAILED + 1))
         fi
     else
         echo "# ОШИБКА! При оптимизации таблицы $table: $RESULT"

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Скрипт для импорта базы данных из файла latest_<day_of_week>.sql.gz. 
-# Запускается в контейнере mariadb.
-# Импортирует базу данных MARIADB_DATABASE из файла /mariadb-dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
-# Берется самый свежий latest_*.sql.gz, каталог переопределяется переменной MARIADB_DUMP_DIR.
+# Импорт MARIADB_DATABASE под MARIADB_USER.
+# Берётся самый свежий latest_*.sql.gz в MARIADB_DUMP_DIR (по умолчанию
+# /mariadb-dump). Если дампа нет — fallback на
+# /docker-entrypoint-initdb.d/latest.sql.gz.
 # Запуск в контейнере командой: bash scripts/import.sh
 # Запуск на хосте командой: docker exec -t mariadb bash scripts/import.sh
 
