@@ -23,12 +23,12 @@ services:
       # Кастом для создания пользователя debezium при первой инициализации тома
       # Если переменная не указана, пользователя не создаем
       MARIADB_DEBEZIUM_PASSWORD: ${MARIADB_DEBEZIUM_PASSWORD:-}
-      # Кастом для проверки таблицы в healthcheck.sh
-      # Если таблица не указана, то проверка в healthcheck.sh не производится
+      # Для полной проверки: bash scripts/healthcheck.sh (не Docker HEALTHCHECK)
+      # Если таблица не указана, scripts/healthcheck.sh её не проверяет
       MARIADB_HEALTHCHECK_TABLE: ${MARIADB_HEALTHCHECK_TABLE:-}
       # Дополнительно можем проверить наличие индекса, для первичного ключа это PRIMARY
       # Работает только когда указана таблица MARIADB_HEALTHCHECK_TABLE
-      # Если индекс не указан, то проверка в healthcheck.sh не производится
+      # Если индекс не указан, scripts/healthcheck.sh его не проверяет
       MARIADB_HEALTHCHECK_INDEX: ${MARIADB_HEALTHCHECK_INDEX:-}
       # Расчет параметров при запуске контейнера
       # MARIADB_AUTOTUNE=0 отключает расчет целиком, MARIADB_AUTOTUNE_IO=0 - только замер IOPS

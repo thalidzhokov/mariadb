@@ -42,8 +42,8 @@ COPY init-templates/ /init-templates/
 # Владелец mysql, чтобы свежий named volume унаследовал права от образа
 RUN mkdir -p /mariadb-dump && chown mysql:mysql /mariadb-dump
 
-# Штатный healthcheck базового образа. Полная проверка прав и настроек
-# вынесена в scripts/healthcheck.sh и запускается по требованию
+# Штатный healthcheck.sh базового образа (на PATH). Полная проверка —
+# только bash scripts/healthcheck.sh; /scripts в PATH не входит
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD healthcheck.sh --connect --innodb_initialized
 

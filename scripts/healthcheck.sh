@@ -19,7 +19,7 @@ else
     echo "[ok] Переменная окружения MARIADB_ROOT_PASSWORD установлена"
 fi
 
-# Проверка подключение под root пользователем
+# Проверка подключения под root пользователем
 if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
     echo "[error] Неправильный пароль root пользователя"
     exit 1
@@ -44,7 +44,7 @@ else
     echo "[ok] Переменная окружения MARIADB_PASSWORD установлена"
 fi
 
-# Проверка подключение под MARIADB_USER пользователем
+# Проверка подключения под MARIADB_USER пользователем
 if ! mariadb -u "$MARIADB_USER" -p"$MARIADB_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
     echo "[error] Неправильный пароль $MARIADB_USER пользователя"
     exit 1
@@ -71,7 +71,7 @@ if [ -z "$MARIADB_DEBEZIUM_PASSWORD" ]; then
 else
     echo "[ok] Переменная окружения MARIADB_DEBEZIUM_PASSWORD установлена"
 
-    # Проверка подключение под debezium пользователем
+    # Проверка подключения под debezium пользователем
     if ! mariadb -u debezium -p"$MARIADB_DEBEZIUM_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
         echo "[error] Неправильный пароль debezium пользователя"
         exit 1

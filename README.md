@@ -57,6 +57,7 @@ docker run -d --name mariadb \
 | `MARIADB_AUTOTUNE_IO` | `1` | `0` отключает замер IOPS через fio |
 | `MARIADB_BUFFER_POOL_PERCENT` | `60` | Доля доступной памяти под buffer pool |
 | `MARIADB_KEY_BUFFER_SIZE_MB` | `32` | `key_buffer_size` в мегабайтах |
+| `MARIADB_AUTOTUNE_FIO_SIZE` | `1G` | Размер тестового файла fio в томе данных |
 | `MARIADB_AUTOTUNE_FIO_RUNTIME` | `30` | Длительность замера IOPS в секундах |
 | `MARIADB_AUTOTUNE_FIO_FORCE` | не задана | Повторить замер IOPS, игнорируя кеш |
 | `MARIADB_INNODB_FLUSH_NEIGHBORS` | авто | `0` / `1` / `2` — ручной `innodb_flush_neighbors`. Без переменной: SSD/NVMe/`Msft Virtual Disk`/tmpfs → `0`, HDD → `1` |
@@ -127,14 +128,19 @@ IOPS замеряются fio при первом запуске на томе �
 | `create-debezium-user.sh` | Создать или обновить пользователя `debezium` |
 | `upgrade.sh` | `mariadb-upgrade` системных таблиц |
 | `optimize.sh` | `OPTIMIZE TABLE` по всем таблицам базы |
-| `healthcheck.sh` | Полная проверка пользователей, прав, бинлогов и запуск MySQLTuner |
+| `scripts/healthcheck.sh` | Полная проверка пользователей, прав, бинлогов и запуск MySQLTuner |
 | `benchmark.sh` | Замеры через `mariadb-slap` с отчетами |
 | `diagnose-load.sh` | Срезы processlist, блокировки, топ запросов, хвост slow log |
 
-`HEALTHCHECK` самого образа использует штатный `healthcheck.sh` базового образа
-с проверками `--connect --innodb_initialized`. Скрипт `scripts/healthcheck.sh`
-выполняет полную проверку и рассчитан на запуск по требованию: MySQLTuner в нем
-занимает около 15 секунд.
+Два разных `healthcheck.sh` — не путать:
+
+- `HEALTHCHECK` образа вызывает штатный `healthcheck.sh` **базового** образа
+  (он на `PATH`): только `--connect --innodb_initialized`. На
+  `MARIADB_HEALTHCHECK_TABLE` / `INDEX` не смотрит.
+- Полная проверка — только явно:
+  `docker exec -t mariadb bash scripts/healthcheck.sh`
+  (`/scripts` не в `PATH`). MySQLTuner в ней занимает около 15 секунд.
+  `docker exec … healthcheck.sh` без `scripts/` попадёт в штатный скрипт.
 
 ## Дампы и права
 
