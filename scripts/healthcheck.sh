@@ -115,25 +115,31 @@ else
     else
         echo "[ok] Пользователь debezium имеет права REPLICATION CLIENT/BINLOG MONITOR"
     fi
+
+    # Проверка binary logging
+    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'log_bin'" 2>/dev/null | grep -qi "ON"; then
+        echo "[error] Binary logging не включен"
+        exit 1
+    else
+        echo "[ok] Binary logging включен"
+    fi
+
+    # Проверка формата binary log
+    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'binlog_format'" 2>/dev/null | grep -qi "ROW"; then
+        echo "[error] Binary log format не установлен в ROW"
+        exit 1
+    else
+        echo "[ok] Binary log format установлен в ROW"
+    fi
+
+    # Проверка GTID настроек для MariaDB
+    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'gtid_strict_mode'" 2>/dev/null | grep -qi "ON"; then
+        echo "[error] GTID strict mode не включен"
+        exit 1
+    else
+        echo "[ok] GTID strict mode включен"
+    fi
 fi
-
-# Проверка binary logging
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'log_bin'" 2>/dev/null | grep -qi "ON"; then
-    echo "[error] Binary logging не включен"
-    exit 1
-else
-    echo "[ok] Binary logging включен"
-fi
-
-# Проверка формата binary log
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'binlog_format'" 2>/dev/null | grep -qi "ROW"; then
-    echo "[error] Binary log format не установлен в ROW"
-    exit 1
-else
-    echo "[ok] Binary log format установлен в ROW"
-fi
-
-
 
 # MARIADB_DATABASE
 # Проверка переменной MARIADB_DATABASE
@@ -179,14 +185,6 @@ else
             fi
         fi
     fi
-fi
-
-# Проверка GTID настроек для MariaDB
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE 'gtid_strict_mode'" 2>/dev/null | grep -qi "ON"; then
-    echo "[error] GTID strict mode не включен"
-    exit 1
-else
-    echo "[ok] GTID strict mode включен"
 fi
 
 # ASCII арт вам в лог!
