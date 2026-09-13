@@ -2,7 +2,7 @@
 
 # Скрипт диагностики деградации под нагрузкой для MariaDB.
 # Запуск в контейнере: bash scripts/diagnose-load.sh
-# Запуск с хоста: docker exec -i <container_name> bash scripts/diagnose-load.sh
+# Запуск с хоста: docker exec -i mariadb bash scripts/diagnose-load.sh
 #
 # Скрипт собирает:
 # - глобальные переменные и статус MariaDB
@@ -25,7 +25,7 @@ show_help() {
   --help, -h            Показать справку
 
 ПРИМЕР:
-  $(basename "$0") --db wp_db --samples 24 --interval 2
+  $(basename "$0") --db app_db --samples 24 --interval 2
 "
 }
 
@@ -256,4 +256,4 @@ fi
 
 echo "# Готово. Отчеты сохранены в: ${OUT_DIR}"
 echo "# Копирование на хост:"
-echo "# docker cp <container_name>:${OUT_DIR}/. ./db-diagnose-${TIMESTAMP}/"
+echo "# docker cp mariadb:${OUT_DIR}/. ./db-diagnose-${TIMESTAMP}/"

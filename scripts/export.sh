@@ -3,9 +3,9 @@
 # Скрипт для экспорта базы данных в формате latest_<day_of_week>.sql.gz. 
 # Запускается в контейнере mariadb.
 # Делает экспорт базы данных MARIADB_DATABASE в файл /mariadb-dump/latest_<day_of_week>.sql.gz под правами пользователя MARIADB_USER.
-# На хосте файл ./docker_images/mariadb/dump/latest_<day_of_week>.sql.gz
+# Каталог для дампов переопределяется переменной MARIADB_DUMP_DIR.
 # Запуск в контейнере командой: bash scripts/export.sh
-# Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/export.sh
+# Запуск на хосте командой: docker exec -t mariadb bash scripts/export.sh
 
 set -euo pipefail
 

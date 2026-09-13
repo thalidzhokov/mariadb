@@ -4,7 +4,7 @@
 # Запускается в контейнере mariadb.
 # Выполняет OPTIMIZE TABLE для всех таблиц в указанной базе данных.
 # Запуск в контейнере командой: bash scripts/optimize.sh
-# Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/optimize.sh
+# Запуск на хосте командой: docker exec -t mariadb bash scripts/optimize.sh
 
 set -euo pipefail
 
@@ -57,17 +57,10 @@ while IFS= read -r table; do
     # Результат присваивания проверяем прямо в if: отдельная проверка $?
     # после присваивания всегда видела бы его код, а не код mariadb
     if RESULT=$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -D "$MARIADB_DATABASE" -e "OPTIMIZE TABLE \`$table\`" 2>&1); then
-        # Примеры результата оптимизации
-        # 1.
-        # Table   Op      Msg_type        Msg_text
-        # wp_db.wp_term_taxonomy  optimize        status  Table is already up to date
-        # 2.
-        # Table   Op      Msg_type        Msg_text
-        # wp_db.wp_commentmeta    optimize        note    Table does not support optimize, doing recreate + analyze instead
-        # Table   Op      Msg_type        Msg_text
-        # wp_db.wp_commentmeta    optimize        status  OK      
-
-        # Проверяем результат оптимизации
+        # InnoDB не поддерживает OPTIMIZE напрямую: сервер отвечает note про
+        # recreate + analyze и отдельной строкой status OK. Таблица без
+        # изменений дает status "Table is already up to date", поэтому
+        # успехом считаем оба варианта
         if echo "$RESULT" | grep -q "OK\|Table is already up to date"; then
             echo "# Таблица $table оптимизирована успешно. ОК!"
             OPTIMIZED=$((OPTIMIZED + 1))

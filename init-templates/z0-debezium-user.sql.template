@@ -1,7 +1,8 @@
 -- Шаблон инициализации пользователя debezium для MariaDB.
 -- Переменные подставляются при запуске контейнера в scripts/create-debezium-user.sh,
 -- поэтому пароль не попадает в слои образа.
--- Префикс z0- обеспечивает выполнение после создания MARIADB_DATABASE.
+-- Шаблон применяет initdb.d/z0-debezium-user.sh: префикс z0- ставит его после
+-- создания MARIADB_DATABASE, но раньше пользовательских файлов на z1- и дальше.
 
 -- Проверяем, что база данных существует
 SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${MARIADB_DATABASE}' LIMIT 1;

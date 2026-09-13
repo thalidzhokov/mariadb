@@ -13,8 +13,8 @@
 # Примеры запуска:
 #   В контейнере: bash scripts/recreate.sh
 #   В контейнере без экспорта: bash scripts/recreate.sh --no-export
-#   На хосте, напр., для локального окружения: docker exec -t loc_es_mariadb bash scripts/recreate.sh
-#   На хосте без экспорта, напр., для локального окружения: docker exec -t loc_es_mariadb bash scripts/recreate.sh --no-export
+#   На хосте: docker exec -t mariadb bash scripts/recreate.sh
+#   На хосте без экспорта: docker exec -t mariadb bash scripts/recreate.sh --no-export
 
 set -euo pipefail
 
@@ -36,10 +36,12 @@ show_help() {
   $(basename "$0") -ne          # То же самое, короткий флаг
 
 ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ:
-  MARIADB_DATABASE      - Имя базы данных
-  MARIADB_ROOT_PASSWORD - Пароль root пользователя
-  MARIADB_USER          - Имя пользователя БД
-  MARIADB_PASSWORD      - Пароль пользователя БД
+  MARIADB_DATABASE           - Имя базы данных
+  MARIADB_ROOT_PASSWORD      - Пароль root пользователя
+  MARIADB_USER               - Имя пользователя БД
+  MARIADB_PASSWORD           - Пароль пользователя БД
+  MARIADB_DUMP_DIR           - Каталог для дампов (по умолчанию: /mariadb-dump)
+  MARIADB_DEBEZIUM_PASSWORD  - Пароль debezium, без него шаг 4 пропускается
   
 "
 }

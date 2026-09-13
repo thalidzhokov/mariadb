@@ -4,7 +4,7 @@
 # Запускается в контейнере mariadb.
 # Создает базу данных MARIADB_DATABASE в контейнере под правами root пользователя.
 # Запуск в контейнере командой: bash scripts/create.sh
-# Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/create.sh
+# Запуск на хосте командой: docker exec -t mariadb bash scripts/create.sh
 
 set -euo pipefail
 

@@ -4,7 +4,7 @@
 # Запускается в контейнере mariadb.
 # Удаляет базу данных MARIADB_DATABASE в контейнере под правами root пользователя.
 # Запуск в контейнере командой: bash scripts/drop.sh
-# Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/drop.sh
+# Запуск на хосте командой: docker exec -t mariadb bash scripts/drop.sh
 
 set -euo pipefail
 

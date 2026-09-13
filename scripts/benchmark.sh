@@ -2,7 +2,7 @@
 
 # Скрипт бенчмарка MariaDB внутри контейнера.
 # Запуск в контейнере: bash scripts/benchmark.sh
-# Запуск с хоста: docker exec -ti <container_name> bash scripts/benchmark.sh
+# Запуск с хоста: docker exec -ti mariadb bash scripts/benchmark.sh
 
 set -euo pipefail
 
@@ -25,7 +25,7 @@ show_help() {
   --help, -h               Показать справку
 
 ПРИМЕР:
-  $(basename "$0") --db wp_db --bench-db bench_slap --concurrency 10,50,100
+  $(basename "$0") --db app_db --bench-db bench_slap --concurrency 10,50,100
 "
 }
 
@@ -128,9 +128,9 @@ SHOW GLOBAL STATUS WHERE Variable_name IN (
 );" > "${OUT_DIR}/01-vars-status-before.txt"
 
 if [ "$RUN_TUNER" = "1" ]; then
-    if [ -f "./mysqltuner.pl" ]; then
+    if [ -f "/mysqltuner.pl" ]; then
         echo "# [2/7] Запускаем mysqltuner..."
-        perl ./mysqltuner.pl --user root --pass "$MARIADB_ROOT_PASSWORD" --noask --nocolor > "${OUT_DIR}/02-mysqltuner-before.txt"
+        perl /mysqltuner.pl --user root --pass "$MARIADB_ROOT_PASSWORD" --noask --nocolor > "${OUT_DIR}/02-mysqltuner-before.txt"
     else
         echo "# [2/7] mysqltuner.pl не найден, шаг пропущен"
     fi
@@ -177,4 +177,4 @@ SHOW GLOBAL STATUS WHERE Variable_name IN (
 
 echo "# Готово. Отчеты сохранены в: ${OUT_DIR}"
 echo "# Для копирования на хост:"
-echo "# docker cp <container_name>:${OUT_DIR}/. ./db-bench-${TIMESTAMP}/"
+echo "# docker cp mariadb:${OUT_DIR}/. ./db-bench-${TIMESTAMP}/"

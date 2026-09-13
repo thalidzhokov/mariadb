@@ -4,7 +4,7 @@
 # Запускается в контейнере mariadb.
 # Подставляет переменные окружения в шаблон и применяет его под правами root пользователя.
 # Запуск в контейнере командой: bash scripts/create-debezium-user.sh
-# Запуск на хосте, напр., для локального окружения, командой: docker exec -t loc_es_mariadb bash scripts/create-debezium-user.sh
+# Запуск на хосте командой: docker exec -t mariadb bash scripts/create-debezium-user.sh
 
 set -euo pipefail
 

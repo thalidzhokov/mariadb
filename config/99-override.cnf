@@ -70,7 +70,7 @@ slow_query_log_file = /var/lib/mysql/mysql-slow.log
 long_query_time = 0.1
 min_examined_row_limit = 100
 
-# В MariaDB 11.8.6 опция log_slow_admin_statements=ON является устаревшей
+# log_slow_admin_statements устарела с MariaDB 11.0.1, вместо нее admin в log_slow_filter
 log_slow_filter=admin,filesort,filesort_on_disk,filesort_priority_queue,full_join,full_scan,query_cache,query_cache_miss,tmp_table,tmp_table_on_disk
 log_slow_slave_statements=ON
 log_slow_rate_limit=100
