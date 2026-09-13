@@ -16,6 +16,7 @@ LABEL org.opencontainers.image.title="mariadb" \
 # fio нужен для замера IOPS, percona-toolkit для pt-query-digest и pt-* диагностики
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        bc \
         curl \
         fio \
         percona-toolkit \
