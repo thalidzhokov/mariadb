@@ -53,6 +53,10 @@ innodb_monitor_enable=all
 # query_response_time_stats=ON
 userstat=ON
 
+# Deadlock logging (MySQLTuner)
+# Default Value: OFF
+innodb_print_all_deadlocks = ON
+
 # Медленные запросы
 # slow_query_log
 # Начиная с MariaDB 10.11.0 является алиасом для log_slow_query.
