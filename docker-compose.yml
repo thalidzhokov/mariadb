@@ -1,7 +1,7 @@
 services:
   mariadb:
     build:
-      context: ./infra/mariadb
+      context: ./mariadb
       args:
         MARIADB_DATABASE: ${PANEL_DB_NAME}
         # Кастом для debezium
@@ -26,12 +26,12 @@ services:
     volumes:
       - panel-mariadb:/var/lib/mysql
       # Резервные копии базы данных
-      - ./infra/mariadb/panel-dump:/var/www/dump
+      - ./mariadb/dump:/var/www/dump
       # Инициализация базы данных
       # При создании контейнера шаблоны из ./init-templates/ добавляются в папку /docker-entrypoint-initdb.d/
       # Поэтому файлы для инициализации необходимо добавлять отдельными монт-вольмами
       # - ./infra/mariadb/panel-init/latest.sql.gz:/docker-entrypoint-initdb.d/latest.sql.gz
-      - ./infra/mariadb/panel-init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
+      - ./mariadb/init/z1-custom-indexes.sql:/docker-entrypoint-initdb.d/z1-custom-indexes.sql
     sysctls:
       - net.core.somaxconn=10000
     security_opt:
