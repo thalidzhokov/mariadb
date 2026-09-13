@@ -146,12 +146,16 @@ else
     echo "[ok] Переменная окружения MARIADB_DATABASE установлена"
 fi
 
-# Проверка существования базы данных MARIADB_DATABASE
-if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "SHOW DATABASES LIKE '$MARIADB_DATABASE'" 2>/dev/null | grep -q "$MARIADB_DATABASE"; then
+# Проверка существования базы данных MARIADB_DATABASE.
+# Не SHOW DATABASES LIKE + grep: у LIKE заголовок колонки — Database (pattern),
+# имя попадает в вывод даже при нуле строк.
+db_exists="$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -N -s -e \
+    "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$MARIADB_DATABASE'" 2>/dev/null || true)"
+if [ "${db_exists:-0}" -eq 1 ]; then
+    echo "[ok] База данных $MARIADB_DATABASE существует"
+else
     echo "[error] База данных $MARIADB_DATABASE не существует"
     exit 1
-else
-    echo "[ok] База данных $MARIADB_DATABASE существует"
 fi
 
 # Проверка существования таблицы если указана MARIADB_HEALTHCHECK_TABLE
@@ -160,10 +164,10 @@ if [ -z "$MARIADB_HEALTHCHECK_TABLE" ]; then
 else
     echo "[ok] Переменная окружения MARIADB_HEALTHCHECK_TABLE установлена"
 
-    if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "USE $MARIADB_DATABASE; SHOW TABLES LIKE '$MARIADB_HEALTHCHECK_TABLE'" 2>/dev/null | grep -q "$MARIADB_HEALTHCHECK_TABLE"; then
-        echo "[error] Таблица $MARIADB_HEALTHCHECK_TABLE не существует в базе данных $MARIADB_DATABASE"
-        exit 1
-    else
+    # Не SHOW TABLES LIKE + grep: заголовок Tables_in_<db> (pattern) даёт ложный ok
+    table_exists="$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -N -s -e \
+        "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$MARIADB_DATABASE' AND TABLE_NAME = '$MARIADB_HEALTHCHECK_TABLE'" 2>/dev/null || true)"
+    if [ "${table_exists:-0}" -eq 1 ]; then
         echo "[ok] Таблица $MARIADB_HEALTHCHECK_TABLE существует"
 
         # Проверяем что у таблицы MARIADB_HEALTHCHECK_TABLE есть индекс MARIADB_HEALTHCHECK_INDEX.
@@ -173,13 +177,18 @@ else
         else
             echo "[ok] Переменная окружения MARIADB_HEALTHCHECK_INDEX установлена"
 
-            if ! mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -e "USE $MARIADB_DATABASE; SHOW KEYS FROM $MARIADB_HEALTHCHECK_TABLE WHERE Key_name = '$MARIADB_HEALTHCHECK_INDEX'" 2>/dev/null | grep -q "$MARIADB_HEALTHCHECK_INDEX"; then
+            index_exists="$(mariadb -u root -p"$MARIADB_ROOT_PASSWORD" -N -s -e \
+                "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '$MARIADB_DATABASE' AND TABLE_NAME = '$MARIADB_HEALTHCHECK_TABLE' AND INDEX_NAME = '$MARIADB_HEALTHCHECK_INDEX'" 2>/dev/null || true)"
+            if [ "${index_exists:-0}" -ge 1 ]; then
+                echo "[ok] У таблицы $MARIADB_HEALTHCHECK_TABLE есть индекс $MARIADB_HEALTHCHECK_INDEX"
+            else
                 echo "[error] У таблицы $MARIADB_HEALTHCHECK_TABLE нет индекса $MARIADB_HEALTHCHECK_INDEX"
                 exit 1
-            else
-                echo "[ok] У таблицы $MARIADB_HEALTHCHECK_TABLE есть индекс $MARIADB_HEALTHCHECK_INDEX"
             fi
         fi
+    else
+        echo "[error] Таблица $MARIADB_HEALTHCHECK_TABLE не существует в базе данных $MARIADB_DATABASE"
+        exit 1
     fi
 fi
 
